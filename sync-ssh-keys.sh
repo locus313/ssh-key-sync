@@ -53,6 +53,6 @@ for USER in "${!USER_KEYS[@]}"; do
       log_message "No changes for user '$USER'"
     fi
   else
-    echo "$(log_message): Failed to download keys for '$USER' from $URL"
+    log_message "Failed to download keys for '$USER' from $URL"
   fi
 done
