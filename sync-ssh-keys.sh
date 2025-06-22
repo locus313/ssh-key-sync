@@ -17,7 +17,7 @@ log_message() {
 TMP_FILES=()
 trap 'rm -f "${TMP_FILES[@]}"' EXIT
 for USER in "${!USER_KEYS[@]}"; do
-  local TMP_FILE=$(mktemp)
+  TMP_FILE=$(mktemp)
   TMP_FILES+=("$TMP_FILE")
   URL="${USER_KEYS[$USER]}"
   # Ensure user exists
