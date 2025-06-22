@@ -50,7 +50,7 @@ for USER in "${!USER_KEYS[@]}"; do
       chmod 600 "$AUTH_KEYS"
       log_message "Updated authorized_keys for user '$USER'"
     else
-      echo "$(log_message): No changes for user '$USER'"
+      log_message "No changes for user '$USER'"
     fi
   else
     echo "$(log_message): Failed to download keys for '$USER' from $URL"
