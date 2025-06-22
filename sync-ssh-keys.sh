@@ -14,9 +14,11 @@ log_message() {
   echo "$TIMESTAMP: $1"
 }
 
+TMP_FILES=()
+trap 'rm -f "${TMP_FILES[@]}"' EXIT
 for USER in "${!USER_KEYS[@]}"; do
   TMP_FILE=$(mktemp)
-  trap 'rm -f "$TMP_FILE"' EXIT
+  TMP_FILES+=("$TMP_FILE")
   URL="${USER_KEYS[$USER]}"
   USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
   if [ -z "$USER_HOME" ]; then
