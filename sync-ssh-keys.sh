@@ -53,5 +53,4 @@ for USER in "${!USER_KEYS[@]}"; do
   else
     echo "$(log_message): Failed to download keys for '$USER' from $URL"
   fi
-  rm -f "$TMP_FILE"
 done
