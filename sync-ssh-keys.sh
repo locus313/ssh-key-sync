@@ -8,6 +8,25 @@ declare -A USER_KEYS=(
   ["admin"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/admin.authorized_keys?ref=main"
 )
 
+fetch_key_file() {
+  local METHOD="$1"
+  local URL="$2"
+  local OUTFILE="$3"
+
+  if [[ "$METHOD" == "raw" ]]; then
+    curl -fsSL "$URL" -o "$OUTFILE"
+    return $?
+  elif [[ "$METHOD" == "api" ]]; then
+    : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
+    curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+               -H "Accept: application/vnd.github.v3.raw" \
+               "$URL" -o "$OUTFILE"
+    return $?
+  else
+    return 2
+  fi
+}
+
 log_message() {
   local TIMESTAMP
   TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -43,34 +62,18 @@ for USER in "${!USER_KEYS[@]}"; do
     log_message "Created .ssh directory for user '$USER'"
   fi
 
-  # Fetch remote key file
-  if [[ "$METHOD" == "raw" ]]; then
-    log_message "Fetching raw key file for $USER from $URL"
-    curl -fsSL "$URL" -o "$TMP_FILE"
-    if [ $? -ne 0 ]; then
-      log_message "Failed to fetch raw key file for user '$USER' from $URL. Skipping."
-      continue
-    fi
-  elif [[ "$METHOD" == "api" ]]; then
-    log_message "Fetching API key file for $USER from $URL"
-    : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
-    curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-               -H "Accept: application/vnd.github.v3.raw" \
-               "$URL" -o "$TMP_FILE"
-    if [ $? -ne 0 ]; then
-      log_message "Failed to fetch API key file for user '$USER' from $URL. Skipping."
-      continue
-    fi
-    if [ ! -f "$AUTH_KEYS" ] || ! cmp -s "$TMP_FILE" "$AUTH_KEYS"; then
-      cp "$TMP_FILE" "$AUTH_KEYS"
-      chown "$USER:$USER" "$AUTH_KEYS"
-      chmod 600 "$AUTH_KEYS"
-      log_message "Updated authorized_keys for user '$USER'"
-    else
-      log_message "No changes for user '$USER'"
-    fi
-  else
-    log_message "Unknown method '$METHOD' for user '$USER'. Skipping."
+  log_message "Fetching key file for $USER from $URL (method: $METHOD)"
+  if ! fetch_key_file "$METHOD" "$URL" "$TMP_FILE"; then
+    log_message "Failed to fetch key file for user '$USER' from $URL. Skipping."
     continue
+  fi
+
+  if [ ! -f "$AUTH_KEYS" ] || ! cmp -s "$TMP_FILE" "$AUTH_KEYS"; then
+    cp "$TMP_FILE" "$AUTH_KEYS"
+    chown "$USER:$USER" "$AUTH_KEYS"
+    chmod 600 "$AUTH_KEYS"
+    log_message "Updated authorized_keys for user '$USER'"
+  else
+    log_message "No changes for user '$USER'"
   fi
 done
