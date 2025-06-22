@@ -8,7 +8,11 @@ declare -A USER_KEYS=(
   ["admin"]="https://example.com/ssh-keys/admin.authorized_keys"
 )
 
-LOG_PREFIX="$(date '+%Y-%m-%d %H:%M:%S')"
+log_message() {
+  local TIMESTAMP
+  TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+  echo "$TIMESTAMP: $1"
+}
 
 for USER in "${!USER_KEYS[@]}"; do
   TMP_FILE=$(mktemp)
