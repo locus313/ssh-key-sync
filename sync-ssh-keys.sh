@@ -33,8 +33,6 @@ for USER in "${!USER_KEYS[@]}"; do
   AUTH_KEYS="$USER_HOME/.ssh/authorized_keys"
   SSH_DIR="$(dirname "$AUTH_KEYS")"
 
-# (Removed redundant user existence check)
-
   # Create .ssh directory if it doesn't exist
   if [ ! -d "$SSH_DIR" ]; then
     mkdir -p "$SSH_DIR"
