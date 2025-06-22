@@ -52,7 +52,7 @@ for USER in "${!USER_KEYS[@]}"; do
       continue
     fi
   elif [[ "$METHOD" == "api" ]]; then
-    echo "$LOG_PREFIX: Fetching API key file for $USER from $URL"
+    log_message "Fetching API key file for $USER from $URL"
     : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
     curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
                -H "Accept: application/vnd.github.v3.raw" \
