@@ -30,7 +30,7 @@ for USER in "${!USER_KEYS[@]}"; do
 
   # Ensure user exists
   if ! id "$USER" &>/dev/null; then
-    echo "$(log_message): User '$USER' does not exist. Skipping."
+    log_message "User '$USER' does not exist. Skipping."
     continue
   fi
 
