@@ -20,7 +20,7 @@ for USER in "${!USER_KEYS[@]}"; do
   URL="${USER_KEYS[$USER]}"
   USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
   if [ -z "$USER_HOME" ]; then
-    echo "$(log_message): Failed to determine home directory for user '$USER'. Skipping."
+    log_message "Failed to determine home directory for user '$USER'. Skipping."
     continue
   fi
   AUTH_KEYS="$USER_HOME/.ssh/authorized_keys"
