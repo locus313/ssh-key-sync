@@ -20,6 +20,11 @@ for USER in "${!USER_KEYS[@]}"; do
   TMP_FILE=$(mktemp)
   TMP_FILES+=("$TMP_FILE")
   URL="${USER_KEYS[$USER]}"
+  # Ensure user exists
+  if ! id "$USER" &>/dev/null; then
+    log_message "User '$USER' does not exist. Skipping."
+    continue
+  fi
   USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
   if [ -z "$USER_HOME" ]; then
     log_message "Failed to determine home directory for user '$USER'. Skipping."
