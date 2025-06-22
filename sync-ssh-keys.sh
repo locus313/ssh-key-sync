@@ -37,7 +37,7 @@ for USER in "${!USER_KEYS[@]}"; do
 
   # Fetch remote key file
   if curl -fsSL "$URL" -o "$TMP_FILE"; then
-    if ! cmp -s "$TMP_FILE" "$AUTH_KEYS"; then
+    if [ ! -f "$AUTH_KEYS" ] || ! cmp -s "$TMP_FILE" "$AUTH_KEYS"; then
       cp "$TMP_FILE" "$AUTH_KEYS"
       chown "$USER:$USER" "$AUTH_KEYS"
       chmod 600 "$AUTH_KEYS"
