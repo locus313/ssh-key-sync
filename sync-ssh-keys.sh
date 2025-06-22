@@ -45,7 +45,7 @@ for USER in "${!USER_KEYS[@]}"; do
 
   # Fetch remote key file
   if [[ "$METHOD" == "raw" ]]; then
-    echo "$LOG_PREFIX: Fetching raw key file for $USER from $URL"
+    log_message "Fetching raw key file for $USER from $URL"
     curl -fsSL "$URL" -o "$TMP_FILE"
   elif [[ "$METHOD" == "api" ]]; then
     echo "$LOG_PREFIX: Fetching API key file for $USER from $URL"
