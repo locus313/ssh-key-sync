@@ -48,7 +48,7 @@ for USER in "${!USER_KEYS[@]}"; do
       cp "$TMP_FILE" "$AUTH_KEYS"
       chown "$USER:$USER" "$AUTH_KEYS"
       chmod 600 "$AUTH_KEYS"
-      echo "$(log_message): Updated authorized_keys for user '$USER'"
+      log_message "Updated authorized_keys for user '$USER'"
     else
       echo "$(log_message): No changes for user '$USER'"
     fi
