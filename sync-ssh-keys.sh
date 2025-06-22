@@ -8,6 +8,12 @@ declare -A USER_KEYS=(
   ["admin"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/admin.authorized_keys?ref=main"
 )
 
+log_message() {
+  local TIMESTAMP
+  TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+  echo "$TIMESTAMP: $1"
+}
+
 fetch_key_file() {
   local METHOD="$1"
   local URL="$2"
@@ -26,12 +32,6 @@ fetch_key_file() {
     log_message "Error: Unsupported method '$METHOD' encountered for URL '$URL'. Halting execution."
     exit 2
   fi
-}
-
-log_message() {
-  local TIMESTAMP
-  TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
-  echo "$TIMESTAMP: $1"
 }
 
 TMP_FILES=()
