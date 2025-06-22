@@ -39,7 +39,7 @@ for USER in "${!USER_KEYS[@]}"; do
     mkdir -p "$SSH_DIR"
     chown "$USER:$USER" "$SSH_DIR"
     chmod 700 "$SSH_DIR"
-    echo "$(log_message): Created .ssh directory for user '$USER'"
+    log_message "Created .ssh directory for user '$USER'"
   fi
 
   # Fetch remote key file
