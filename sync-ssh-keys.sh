@@ -18,7 +18,12 @@ for USER in "${!USER_KEYS[@]}"; do
   TMP_FILE=$(mktemp)
   trap 'rm -f "$TMP_FILE"' EXIT
   URL="${USER_KEYS[$USER]}"
-  AUTH_KEYS="/home/$USER/.ssh/authorized_keys"
+  USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
+  if [ -z "$USER_HOME" ]; then
+    echo "$LOG_PREFIX: Failed to determine home directory for user '$USER'. Skipping."
+    continue
+  fi
+  AUTH_KEYS="$USER_HOME/.ssh/authorized_keys"
   SSH_DIR="$(dirname "$AUTH_KEYS")"
 
   # Ensure user exists
