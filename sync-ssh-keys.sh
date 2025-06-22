@@ -47,12 +47,20 @@ for USER in "${!USER_KEYS[@]}"; do
   if [[ "$METHOD" == "raw" ]]; then
     log_message "Fetching raw key file for $USER from $URL"
     curl -fsSL "$URL" -o "$TMP_FILE"
+    if [ $? -ne 0 ]; then
+      log_message "Failed to fetch raw key file for user '$USER' from $URL. Skipping."
+      continue
+    fi
   elif [[ "$METHOD" == "api" ]]; then
     echo "$LOG_PREFIX: Fetching API key file for $USER from $URL"
     : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
     curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
                -H "Accept: application/vnd.github.v3.raw" \
                "$URL" -o "$TMP_FILE"
+    if [ $? -ne 0 ]; then
+      log_message "Failed to fetch API key file for user '$USER' from $URL. Skipping."
+      continue
+    fi
     if [ ! -f "$AUTH_KEYS" ] || ! cmp -s "$TMP_FILE" "$AUTH_KEYS"; then
       cp "$TMP_FILE" "$AUTH_KEYS"
       chown "$USER:$USER" "$AUTH_KEYS"
