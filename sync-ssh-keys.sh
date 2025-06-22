@@ -14,10 +14,8 @@ log_message() {
   echo "$TIMESTAMP: $1"
 }
 
-TMP_FILES=() {
-  trap 'rm -f "${TMP_FILES[@]}"' EXIT
-}
-
+TMP_FILES=()
+trap 'rm -f "${TMP_FILES[@]}"' EXIT
 for USER in "${!USER_KEYS[@]}"; do
   local TMP_FILE=$(mktemp)
   TMP_FILES+=("$TMP_FILE")
