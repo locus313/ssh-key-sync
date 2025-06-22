@@ -9,9 +9,9 @@ declare -A USER_KEYS=(
 )
 
 LOG_PREFIX="$(date '+%Y-%m-%d %H:%M:%S')"
-TMP_FILE=$(mktemp)
 
 for USER in "${!USER_KEYS[@]}"; do
+  TMP_FILE=$(mktemp)
   URL="${USER_KEYS[$USER]}"
   AUTH_KEYS="/home/$USER/.ssh/authorized_keys"
   SSH_DIR="$(dirname "$AUTH_KEYS")"
