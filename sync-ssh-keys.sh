@@ -20,7 +20,7 @@ for USER in "${!USER_KEYS[@]}"; do
   URL="${USER_KEYS[$USER]}"
   USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
   if [ -z "$USER_HOME" ]; then
-    echo "$LOG_PREFIX: Failed to determine home directory for user '$USER'. Skipping."
+    echo "$(log_message): Failed to determine home directory for user '$USER'. Skipping."
     continue
   fi
   AUTH_KEYS="$USER_HOME/.ssh/authorized_keys"
@@ -28,7 +28,7 @@ for USER in "${!USER_KEYS[@]}"; do
 
   # Ensure user exists
   if ! id "$USER" &>/dev/null; then
-    echo "$LOG_PREFIX: User '$USER' does not exist. Skipping."
+    echo "$(log_message): User '$USER' does not exist. Skipping."
     continue
   fi
 
@@ -37,7 +37,7 @@ for USER in "${!USER_KEYS[@]}"; do
     mkdir -p "$SSH_DIR"
     chown "$USER:$USER" "$SSH_DIR"
     chmod 700 "$SSH_DIR"
-    echo "$LOG_PREFIX: Created .ssh directory for user '$USER'"
+    echo "$(log_message): Created .ssh directory for user '$USER'"
   fi
 
   # Fetch remote key file
@@ -46,12 +46,12 @@ for USER in "${!USER_KEYS[@]}"; do
       cp "$TMP_FILE" "$AUTH_KEYS"
       chown "$USER:$USER" "$AUTH_KEYS"
       chmod 600 "$AUTH_KEYS"
-      echo "$LOG_PREFIX: Updated authorized_keys for user '$USER'"
+      echo "$(log_message): Updated authorized_keys for user '$USER'"
     else
-      echo "$LOG_PREFIX: No changes for user '$USER'"
+      echo "$(log_message): No changes for user '$USER'"
     fi
   else
-    echo "$LOG_PREFIX: Failed to download keys for '$USER' from $URL"
+    echo "$(log_message): Failed to download keys for '$USER' from $URL"
   fi
   rm -f "$TMP_FILE"
 done
