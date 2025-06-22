@@ -3,9 +3,9 @@ set -euo pipefail
 
 # === Configuration: user -> remote key file URL ===
 declare -A USER_KEYS=(
-  ["ubuntu"]="https://example.com/ssh-keys/ubuntu.authorized_keys"
-  ["devuser"]="https://example.com/ssh-keys/devuser.authorized_keys"
-  ["admin"]="https://example.com/ssh-keys/admin.authorized_keys"
+  ["ubuntu"]="raw:https://example.com/ssh-keys/ubuntu.authorized_keys"
+  ["devuser"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/devuser.authorized_keys?ref=main"
+  ["admin"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/admin.authorized_keys?ref=main"
 )
 
 log_message() {
@@ -19,7 +19,9 @@ trap 'rm -f "${TMP_FILES[@]}"' EXIT
 for USER in "${!USER_KEYS[@]}"; do
   TMP_FILE=$(mktemp)
   TMP_FILES+=("$TMP_FILE")
-  URL="${USER_KEYS[$USER]}"
+  ENTRY="${USER_KEYS[$USER]}"
+  METHOD="${ENTRY%%:*}"
+  URL="${ENTRY#*:}"
   # Ensure user exists
   if ! id "$USER" &>/dev/null; then
     log_message "User '$USER' does not exist. Skipping."
@@ -42,7 +44,15 @@ for USER in "${!USER_KEYS[@]}"; do
   fi
 
   # Fetch remote key file
-  if curl -fsSL "$URL" -o "$TMP_FILE"; then
+  if [[ "$METHOD" == "raw" ]]; then
+    echo "$LOG_PREFIX: Fetching raw key file for $USER from $URL"
+    curl -fsSL "$URL" -o "$TMP_FILE"
+  elif [[ "$METHOD" == "api" ]]; then
+    echo "$LOG_PREFIX: Fetching API key file for $USER from $URL"
+    : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
+    curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+               -H "Accept: application/vnd.github.v3.raw" \
+               "$URL" -o "$TMP_FILE"; then
     if [ ! -f "$AUTH_KEYS" ] || ! cmp -s "$TMP_FILE" "$AUTH_KEYS"; then
       cp "$TMP_FILE" "$AUTH_KEYS"
       chown "$USER:$USER" "$AUTH_KEYS"
@@ -52,6 +62,7 @@ for USER in "${!USER_KEYS[@]}"; do
       log_message "No changes for user '$USER'"
     fi
   else
-    log_message "Failed to download keys for '$USER' from $URL"
+    log_message "Unknown method '$METHOD' for user '$USER'. Skipping."
+    continue
   fi
 done
