@@ -33,11 +33,7 @@ for USER in "${!USER_KEYS[@]}"; do
   AUTH_KEYS="$USER_HOME/.ssh/authorized_keys"
   SSH_DIR="$(dirname "$AUTH_KEYS")"
 
-  # Ensure user exists
-  if ! id "$USER" &>/dev/null; then
-    log_message "User '$USER' does not exist. Skipping."
-    continue
-  fi
+# (Removed redundant user existence check)
 
   # Create .ssh directory if it doesn't exist
   if [ ! -d "$SSH_DIR" ]; then
