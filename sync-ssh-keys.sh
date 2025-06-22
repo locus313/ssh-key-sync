@@ -23,6 +23,7 @@ fetch_key_file() {
                "$URL" -o "$OUTFILE"
     return $?
   else
+    log_message "Unsupported method '$METHOD' encountered. Skipping."
     return 2
   fi
 }
