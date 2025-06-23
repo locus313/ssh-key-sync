@@ -1,12 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# === Configuration: user -> remote key file URL ===
-declare -A USER_KEYS=(
-  ["ubuntu"]="raw:https://example.com/ssh-keys/ubuntu.authorized_keys"
-  ["devuser"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/devuser.authorized_keys?ref=main"
-  ["admin"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/admin.authorized_keys?ref=main"
-)
+SCRIPT_VERSION="0.0.3"
+
+# === Load user configuration ===
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/users.conf"
 
 log_message() {
   local TIMESTAMP
