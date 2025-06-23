@@ -15,7 +15,7 @@ jobs:
       - name: Extract SCRIPT_VERSION from sync-ssh-keys.sh
         id: get_version
         run: |
-          VERSION=$(grep -m1 SCRIPT_VERSION sync-ssh-keys.sh | sed -E 's/.*"([0-9.]+)".*/\1/')
+          VERSION=$(awk -F'"' '/SCRIPT_VERSION/ {print $2; exit}' sync-ssh-keys.sh)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Fetch tags
