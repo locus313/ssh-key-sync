@@ -1,16 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-SCRIPT_VERSION="0.0.3"
+SCRIPT_VERSION="0.0.4"
 
 # === Load user configuration ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ ! -f "$SCRIPT_DIR/users.conf" ]; then
-  echo "Error: Configuration file 'users.conf' not found in $SCRIPT_DIR. Halting execution." >&2
+  log_message "Error: Configuration file 'users.conf' not found in $SCRIPT_DIR. Halting execution." >&2
   exit 1
 fi
 if ! source "$SCRIPT_DIR/users.conf"; then
-  echo "Error: Failed to load configuration file 'users.conf'. Please check the file for syntax errors. Halting execution." >&2
+  log_message "Error: Failed to load configuration file 'users.conf'. Please check the file for syntax errors. Halting execution." >&2
   exit 1
 fi
 
