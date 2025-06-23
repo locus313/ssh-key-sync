@@ -15,7 +15,11 @@ jobs:
       - name: Extract version from script
         id: get_version
         run: |
-          VERSION=$(grep -m1 SCRIPT_VERSION sync-ssh-keys.sh | sed -E 's/.*"([0-9.]+)".*/\1/')
+          VERSION=$(awk -F'"' '/SCRIPT_VERSION/ {print $2; exit}' sync-ssh-keys.sh)
+          if [[ ! $VERSION =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "Error: Invalid version format: $VERSION" >&2
+            exit 1
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create tag if needed
