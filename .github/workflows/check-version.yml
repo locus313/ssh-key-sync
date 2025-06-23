@@ -1,0 +1,32 @@
+name: Check Script Version
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract SCRIPT_VERSION from sync-ssh-keys.sh
+        id: get_version
+        run: |
+          VERSION=$(awk -F'"' '/SCRIPT_VERSION/ {print $2; exit}' sync-ssh-keys.sh)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Fetch tags
+        run: git fetch --tags
+
+      - name: Check if version tag exists
+        run: |
+          TAG="v${{ steps.get_version.outputs.version }}"
+          if git tag --list | grep -q "^$TAG$"; then
+            echo "Error: Tag $TAG already exists. Please bump SCRIPT_VERSION."
+            exit 1
+          else
+            echo "Tag $TAG does not exist. Good to merge."
+          fi

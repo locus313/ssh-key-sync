@@ -14,14 +14,15 @@ This Bash script pulls `authorized_keys` files from remote URLs and updates SSH 
 
 ## ⚙️ Configuration
 
-Edit the `USER_KEYS` associative array in `sync-ssh-keys.sh` to define users and their key sources.  
+User configuration is stored in a separate `users.conf` file in the same directory as the script.  
+Edit `users.conf` to define users and their key sources.  
 Each entry uses the format:  
 `["username"]="method:url"`
 
 - **raw:** Fetches directly from a public URL.
 - **api:** Fetches from a private GitHub repo using the GitHub API (requires `GITHUB_TOKEN` environment variable).
 
-**Example:**
+**Example `users.conf`:**
 ```bash
 declare -A USER_KEYS=(
   ["ubuntu"]="raw:https://example.com/ssh-keys/ubuntu.authorized_keys"
@@ -31,12 +32,16 @@ declare -A USER_KEYS=(
 
 ## Usage
 
-1. Edit the `USER_KEYS` array in `sync-ssh-keys.sh` to define users and their key URLs.
+1. Edit the `users.conf` file to define users and their key URLs.
 2. If using the `api` method, export your GitHub token:
    ```bash
    export GITHUB_TOKEN=your_token_here
    ```
-3. Add to root's crontab:
+3. Make sure the script is executable:
+   ```bash
+   chmod +x sync-ssh-keys.sh
+   ```
+4. Add to root's crontab:
 
 ```cron
 */15 * * * * /usr/local/bin/sync-ssh-keys.sh >> /var/log/ssh-key-sync.log 2>&1
@@ -44,6 +49,7 @@ declare -A USER_KEYS=(
 
 ## Implementation Notes
 
-- The script uses a helper function `fetch_key_file` to fetch keys using the appropriate method.
+- The script sources `users.conf` for configuration.
+- Uses a helper function `fetch_key_file` to fetch keys using the appropriate method.
 - Only updates a user's `authorized_keys` if the remote file has changed.
 - Logs all actions with timestamps.
