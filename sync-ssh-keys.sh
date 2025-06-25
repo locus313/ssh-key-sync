@@ -40,7 +40,7 @@ fetch_key_file() {
     curl -fsSL "https://github.com/${TARGET}.keys" -o "$OUTFILE"
     if [ $? -ne 0 ]; then
       log_message "Error: Failed to fetch SSH keys for GitHub user '$TARGET' from 'https://github.com/${TARGET}.keys'."
-      return 1
+      exit 2
     fi
     return 0
   else
