@@ -35,6 +35,10 @@ fetch_key_file() {
                -H "Accept: application/vnd.github.v3.raw" \
                "$URL" -o "$OUTFILE"
     return $?
+  elif [[ "$METHOD" == "ghuser" ]]; then
+    # URL is the GitHub username
+    curl -fsSL "https://github.com/${URL}.keys" -o "$OUTFILE"
+    return $?
   else
     log_message "Error: Unsupported method '$METHOD' encountered for URL '$URL'. Halting execution."
     exit 2

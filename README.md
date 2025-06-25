@@ -9,6 +9,7 @@ This Bash script pulls `authorized_keys` files from remote URLs and updates SSH 
 - Works with:
   - ✅ Public URLs (method: `raw`)
   - ✅ Private GitHub repositories via GitHub API (method: `api`, requires token)
+  - ✅ GitHub user public keys (method: `ghuser`)
 - Safe: Only updates keys if they’ve changed
 - Logs activity per user
 
@@ -21,18 +22,20 @@ Each entry uses the format:
 
 - **raw:** Fetches directly from a public URL.
 - **api:** Fetches from a private GitHub repo using the GitHub API (requires `GITHUB_TOKEN` environment variable).
+- **ghuser:** Fetches public keys from a GitHub user's profile (provide the GitHub username after the colon).
 
 **Example `users.conf`:**
 ```bash
 declare -A USER_KEYS=(
   ["ubuntu"]="raw:https://example.com/ssh-keys/ubuntu.authorized_keys"
   ["devuser"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/devuser.authorized_keys?ref=main"
+  ["alice"]="ghuser:alice-github-username"
 )
 ```
 
 ## Usage
 
-1. Edit the `users.conf` file to define users and their key URLs.
+1. Edit the `users.conf` file to define users and their key URLs or GitHub usernames.
 2. If using the `api` method, export your GitHub token:
    ```bash
    export GITHUB_TOKEN=your_token_here
