@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# shellcheck disable=SC2034  # SCRIPT_VERSION is planned ot be used in a future release
+# shellcheck disable=SC2034  # planned to be used in a future release
 SCRIPT_VERSION="0.0.4"
 
 # === Load user configuration ===
