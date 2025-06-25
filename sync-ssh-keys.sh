@@ -38,7 +38,11 @@ fetch_key_file() {
   elif [[ "$METHOD" == "ghuser" ]]; then
     # URL is the GitHub username
     curl -fsSL "https://github.com/${URL}.keys" -o "$OUTFILE"
-    return $?
+    if [ $? -ne 0 ]; then
+      log_message "Error: Failed to fetch SSH keys for GitHub user '$URL' from 'https://github.com/${URL}.keys'."
+      return 1
+    fi
+    return 0
   else
     log_message "Error: Unsupported method '$METHOD' encountered for URL '$URL'. Halting execution."
     exit 2
