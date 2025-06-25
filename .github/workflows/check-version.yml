@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'sync-ssh-keys.sh'
+      - 'users.conf'
 
 jobs:
   check-version:

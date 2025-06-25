@@ -1,7 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-SCRIPT_VERSION="0.0.4"
+# shellcheck disable=SC2034  # planned to be used in a future release
+SCRIPT_VERSION="0.0.5"
 
 # === Load user configuration ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
