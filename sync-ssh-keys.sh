@@ -23,28 +23,28 @@ log_message() {
 
 fetch_key_file() {
   local METHOD="$1"
-  local URL="$2"
+  local TARGET="$2"
   local OUTFILE="$3"
 
   if [[ "$METHOD" == "raw" ]]; then
-    curl -fsSL "$URL" -o "$OUTFILE"
+    curl -fsSL "$TARGET" -o "$OUTFILE"
     return $?
   elif [[ "$METHOD" == "api" ]]; then
     : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
     curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
                -H "Accept: application/vnd.github.v3.raw" \
-               "$URL" -o "$OUTFILE"
+               "$TARGET" -o "$OUTFILE"
     return $?
   elif [[ "$METHOD" == "ghuser" ]]; then
-    # URL is the GitHub username
-    curl -fsSL "https://github.com/${URL}.keys" -o "$OUTFILE"
+    # TARGET is the GitHub username
+    curl -fsSL "https://github.com/${TARGET}.keys" -o "$OUTFILE"
     if [ $? -ne 0 ]; then
-      log_message "Error: Failed to fetch SSH keys for GitHub user '$URL' from 'https://github.com/${URL}.keys'."
+      log_message "Error: Failed to fetch SSH keys for GitHub user '$TARGET' from 'https://github.com/${TARGET}.keys'."
       return 1
     fi
     return 0
   else
-    log_message "Error: Unsupported method '$METHOD' encountered for URL '$URL'. Halting execution."
+    log_message "Error: Unsupported method '$METHOD' encountered for URL '$TARGET'. Halting execution."
     exit 2
   fi
 }
