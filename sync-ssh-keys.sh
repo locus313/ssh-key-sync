@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-SCRIPT_VERSION="0.0.5"
+SCRIPT_VERSION="0.0.6"
 
 # === Load user configuration ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,20 +23,24 @@ log_message() {
 
 fetch_key_file() {
   local METHOD="$1"
-  local URL="$2"
+  local TARGET="$2"
   local OUTFILE="$3"
 
   if [[ "$METHOD" == "raw" ]]; then
-    curl -fsSL "$URL" -o "$OUTFILE"
+    curl -fsSL "$TARGET" -o "$OUTFILE"
     return $?
   elif [[ "$METHOD" == "api" ]]; then
     : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
     curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
                -H "Accept: application/vnd.github.v3.raw" \
-               "$URL" -o "$OUTFILE"
+               "$TARGET" -o "$OUTFILE"
+    return $?
+  elif [[ "$METHOD" == "ghuser" ]]; then
+    # TARGET is the GitHub username
+    curl -fsSL "https://github.com/${TARGET}.keys" -o "$OUTFILE"
     return $?
   else
-    log_message "Error: Unsupported method '$METHOD' encountered for URL '$URL'. Halting execution."
+    log_message "Error: Unsupported method '$METHOD' encountered for URL '$TARGET'. Halting execution."
     exit 2
   fi
 }
