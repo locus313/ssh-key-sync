@@ -45,10 +45,9 @@ declare -A USER_KEYS=(
    chmod +x sync-ssh-keys.sh
    ```
 4. Add to root's crontab:
-
-```cron
-*/15 * * * * /usr/local/bin/sync-ssh-keys.sh >> /var/log/ssh-key-sync.log 2>&1
-```
+   ```cron
+   */15 * * * * /usr/local/bin/sync-ssh-keys.sh >> /var/log/ssh-key-sync.log 2>&1
+   ```
 
 ## Implementation Notes
 
