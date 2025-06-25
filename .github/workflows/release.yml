@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'sync-ssh-keys.sh'
+      - 'users.conf'
+  workflow_dispatch:
 
 jobs:
   release:
