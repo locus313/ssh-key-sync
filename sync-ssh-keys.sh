@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-SCRIPT_VERSION="0.0.6"
+SCRIPT_VERSION="0.0.7"
 
 # === Load user configuration ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,6 +13,11 @@ fi
 if ! source "$SCRIPT_DIR/users.conf"; then
   log_message "Error: Failed to load configuration file 'users.conf'. Please check the file for syntax errors. Halting execution." >&2
   exit 1
+fi
+
+# Load GITHUB_TOKEN from config if set and not already in environment
+if [[ -n "${CONF_GITHUB_TOKEN:-}" && -z "${GITHUB_TOKEN:-}" ]]; then
+  export GITHUB_TOKEN="$CONF_GITHUB_TOKEN"
 fi
 
 log_message() {
