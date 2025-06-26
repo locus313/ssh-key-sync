@@ -15,6 +15,11 @@ if ! source "$SCRIPT_DIR/users.conf"; then
   exit 1
 fi
 
+# Load GITHUB_TOKEN from config if set and not already in environment
+if [[ -n "${CONF_GITHUB_TOKEN:-}" && -z "${GITHUB_TOKEN:-}" ]]; then
+  export GITHUB_TOKEN="$CONF_GITHUB_TOKEN"
+fi
+
 log_message() {
   local TIMESTAMP
   TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"

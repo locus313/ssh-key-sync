@@ -24,8 +24,13 @@ Each entry uses the format:
 - **api:** Fetches from a private GitHub repo using the GitHub API (requires `GITHUB_TOKEN` environment variable).
 - **ghuser:** Fetches public keys from a GitHub user's profile (provide the GitHub username after the colon).
 
+You can also set your GitHub token in the config file using `CONF_GITHUB_TOKEN`.  
+If `GITHUB_TOKEN` is not set in the environment, the script will use `CONF_GITHUB_TOKEN` from `users.conf`.
+
 **Example `users.conf`:**
 ```bash
+CONF_GITHUB_TOKEN="your_github_token_here"
+
 declare -A USER_KEYS=(
   ["ubuntu"]="raw:https://example.com/ssh-keys/ubuntu.authorized_keys"
   ["devuser"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/devuser.authorized_keys?ref=main"
@@ -36,7 +41,7 @@ declare -A USER_KEYS=(
 ## Usage
 
 1. Edit the `users.conf` file to define users and their key URLs or GitHub usernames.
-2. If using the `api` method, export your GitHub token:
+2. If using the `api` method, either export your GitHub token or set `CONF_GITHUB_TOKEN` in `users.conf`:
    ```bash
    export GITHUB_TOKEN=your_token_here
    ```
