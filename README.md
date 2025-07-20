@@ -12,6 +12,7 @@ This Bash script pulls `authorized_keys` files from remote URLs and updates SSH 
   - ✅ GitHub user public keys (method: `ghuser`)
 - Safe: Only updates keys if they’ve changed
 - Logs activity per user
+- Retries failed fetch operations up to 3 times with a delay
 
 ## ⚙️ Configuration
 
@@ -41,10 +42,11 @@ declare -A USER_KEYS=(
 ## Usage
 
 1. Edit the `users.conf` file to define users and their key URLs or GitHub usernames.
-2. If using the `api` method, either export your GitHub token or set `CONF_GITHUB_TOKEN` in `users.conf`:
+2. If using the `api` method, either export your GitHub token:
    ```bash
    export GITHUB_TOKEN=your_token_here
    ```
+   or set `CONF_GITHUB_TOKEN` in `users.conf`.
 3. Make sure the script is executable:
    ```bash
    chmod +x sync-ssh-keys.sh
@@ -58,5 +60,18 @@ declare -A USER_KEYS=(
 
 - The script sources `users.conf` for configuration.
 - Uses a helper function `fetch_key_file` to fetch keys using the appropriate method.
+- Includes a retry mechanism for failed fetch operations (3 attempts with a 2-second delay).
 - Only updates a user's `authorized_keys` if the remote file has changed.
 - Logs all actions with timestamps.
+
+## Examples
+
+### Adding a New User
+1. Add the user to `users.conf`:
+   ```bash
+   ["newuser"]="ghuser:newuser-github-username"
+   ```
+2. Run the script to sync keys:
+   ```bash
+   ./sync-ssh-keys.sh
+   ```
