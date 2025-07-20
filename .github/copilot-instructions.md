@@ -13,7 +13,7 @@ This document provides comprehensive guidance for AI coding agents and contribut
   - Support for multiple fetch methods (`raw`, `api`, `ghuser`).
   - Logging and error handling.
   - Configuration loading from `users.conf`.
-  - A helper function `fetch_key_file` to handle key retrieval logic.
+  - A helper function `fetch_key_file` to handle key retrieval logic with retries for failed operations.
 
 ### Configuration
 - **`users.conf`**: Defines users and their key sources. Example structure:
@@ -97,3 +97,8 @@ This document provides comprehensive guidance for AI coding agents and contribut
 - **`raw`**: Fetches keys from a public URL.
 - **`api`**: Fetches keys from a private GitHub repository using the GitHub API.
 - **`ghuser`**: Fetches public keys from a GitHub user's profile.
+
+### Enhanced Error Handling
+- The `fetch_key_file` function includes a retry mechanism for failed fetch operations.
+- By default, it retries up to 3 times with a 2-second delay between attempts.
+- Logs detailed error messages for each failed attempt and skips the user if all retries fail.

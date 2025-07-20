@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-SCRIPT_VERSION="0.0.7"
+SCRIPT_VERSION="0.0.8"
 
 # === Load user configuration ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,24 +30,30 @@ fetch_key_file() {
   local METHOD="$1"
   local TARGET="$2"
   local OUTFILE="$3"
+  local RETRIES=3
+  local RETRY_DELAY=2
 
-  if [[ "$METHOD" == "raw" ]]; then
-    curl -fsSL "$TARGET" -o "$OUTFILE"
-    return $?
-  elif [[ "$METHOD" == "api" ]]; then
-    : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
-    curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-               -H "Accept: application/vnd.github.v3.raw" \
-               "$TARGET" -o "$OUTFILE"
-    return $?
-  elif [[ "$METHOD" == "ghuser" ]]; then
-    # TARGET is the GitHub username
-    curl -fsSL "https://github.com/${TARGET}.keys" -o "$OUTFILE"
-    return $?
-  else
-    log_message "Error: Unsupported method '$METHOD' encountered for URL '$TARGET'. Halting execution."
-    exit 2
-  fi
+  for ((i=1; i<=RETRIES; i++)); do
+    if [[ "$METHOD" == "raw" ]]; then
+      curl -fsSL "$TARGET" -o "$OUTFILE" && return 0
+    elif [[ "$METHOD" == "api" ]]; then
+      : "${GITHUB_TOKEN:?GITHUB_TOKEN is required for API access}"
+      curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 "$TARGET" -o "$OUTFILE" && return 0
+    elif [[ "$METHOD" == "ghuser" ]]; then
+      curl -fsSL "https://github.com/${TARGET}.keys" -o "$OUTFILE" && return 0
+    else
+      log_message "Error: Unsupported method '$METHOD' encountered for URL '$TARGET'. Halting execution."
+      exit 2
+    fi
+
+    log_message "Attempt $i/$RETRIES failed for method '$METHOD' and URL '$TARGET'. Retrying in $RETRY_DELAY seconds..."
+    sleep "$RETRY_DELAY"
+  done
+
+  log_message "Error: All $RETRIES attempts failed for method '$METHOD' and URL '$TARGET'. Skipping."
+  return 1
 }
 
 TMP_FILES=()
@@ -58,16 +64,19 @@ for USER in "${!USER_KEYS[@]}"; do
   ENTRY="${USER_KEYS[$USER]}"
   METHOD="${ENTRY%%:*}"
   URL="${ENTRY#*:}"
+
   # Ensure user exists
   if ! id "$USER" &>/dev/null; then
     log_message "User '$USER' does not exist. Skipping."
     continue
   fi
+
   USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
   if [ -z "$USER_HOME" ]; then
     log_message "Failed to determine home directory for user '$USER'. Skipping."
     continue
   fi
+
   AUTH_KEYS="$USER_HOME/.ssh/authorized_keys"
   SSH_DIR="$(dirname "$AUTH_KEYS")"
 
@@ -76,21 +85,26 @@ for USER in "${!USER_KEYS[@]}"; do
     mkdir -p "$SSH_DIR"
     chown "$USER:$USER" "$SSH_DIR"
     chmod 700 "$SSH_DIR"
-    log_message "Created .ssh directory for user '$USER'"
+    log_message "Created .ssh directory for user '$USER' at $SSH_DIR."
   fi
 
   log_message "Fetching key file for $USER from $URL (method: $METHOD)"
   if ! fetch_key_file "$METHOD" "$URL" "$TMP_FILE"; then
-    log_message "Failed to fetch key file for user '$USER' from $URL. Skipping."
+    log_message "Failed to fetch key file for user '$USER' from $URL after multiple attempts. Skipping."
     continue
   fi
 
-  if [ ! -f "$AUTH_KEYS" ] || ! cmp -s "$TMP_FILE" "$AUTH_KEYS"; then
-    cp "$TMP_FILE" "$AUTH_KEYS"
-    chown "$USER:$USER" "$AUTH_KEYS"
-    chmod 600 "$AUTH_KEYS"
-    log_message "Updated authorized_keys for user '$USER'"
+  if [ ! -f "$AUTH_KEYS" ]; then
+    log_message "No existing authorized_keys file for user '$USER'. Creating a new one."
+  elif ! cmp -s "$TMP_FILE" "$AUTH_KEYS"; then
+    log_message "Changes detected in authorized_keys for user '$USER'. Updating the file."
   else
-    log_message "No changes for user '$USER'"
+    log_message "No changes detected in authorized_keys for user '$USER'."
+    continue
   fi
+
+  cp "$TMP_FILE" "$AUTH_KEYS"
+  chown "$USER:$USER" "$AUTH_KEYS"
+  chmod 600 "$AUTH_KEYS"
+  log_message "Updated authorized_keys for user '$USER' at $AUTH_KEYS."
 done
