@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-SCRIPT_VERSION="0.0.8"
+SCRIPT_VERSION="0.0.9"
 
 # === Load user configuration ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,6 +55,43 @@ fetch_key_file() {
   log_message "Error: All $RETRIES attempts failed for method '$METHOD' and URL '$TARGET'. Skipping."
   return 1
 }
+
+self_update() {
+  local REPO="locus313/ssh-key-sync"
+  local LATEST_URL
+  local TMP_DIR
+
+  log_message "Checking for the latest version of the script..."
+
+  LATEST_URL=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | \
+    grep "browser_download_url" | grep "sync-ssh-keys.sh" | cut -d '"' -f 4)
+
+  if [ -z "$LATEST_URL" ]; then
+    log_message "Error: Could not determine the latest version URL."
+    exit 1
+  fi
+
+  TMP_DIR=$(mktemp -d)
+  curl -fsSL "$LATEST_URL" -o "$TMP_DIR/sync-ssh-keys.sh"
+
+  if [ ! -s "$TMP_DIR/sync-ssh-keys.sh" ]; then
+    log_message "Error: Downloaded script is empty. Aborting update."
+    rm -rf "$TMP_DIR"
+    exit 1
+  fi
+
+  chmod +x "$TMP_DIR/sync-ssh-keys.sh"
+  mv "$TMP_DIR/sync-ssh-keys.sh" "$SCRIPT_DIR/sync-ssh-keys.sh"
+  rm -rf "$TMP_DIR"
+
+  log_message "Script successfully updated to the latest version."
+  exit 0
+}
+
+# --- Option parsing ---
+if [[ "${1:-}" == "--self-update" ]]; then
+  self_update
+fi
 
 TMP_FILES=()
 trap 'rm -f "${TMP_FILES[@]}"' EXIT

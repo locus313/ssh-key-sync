@@ -14,6 +14,7 @@ This document provides comprehensive guidance for AI coding agents and contribut
   - Logging and error handling.
   - Configuration loading from `users.conf`.
   - A helper function `fetch_key_file` to handle key retrieval logic with retries for failed operations.
+  - A `--self-update` option to fetch and replace the script with the latest version from the GitHub repository.
 
 ### Configuration
 - **`users.conf`**: Defines users and their key sources. Example structure:
@@ -37,6 +38,10 @@ This document provides comprehensive guidance for AI coding agents and contribut
 2. Run the script manually:
    ```bash
    ./sync-ssh-keys.sh
+   ```
+3. To update the script to the latest version, run:
+   ```bash
+   ./sync-ssh-keys.sh --self-update
    ```
 
 ### Configuration
@@ -102,3 +107,8 @@ This document provides comprehensive guidance for AI coding agents and contribut
 - The `fetch_key_file` function includes a retry mechanism for failed fetch operations.
 - By default, it retries up to 3 times with a 2-second delay between attempts.
 - Logs detailed error messages for each failed attempt and skips the user if all retries fail.
+
+### Self-Update Feature
+- The `--self-update` option fetches the latest version of the script from the GitHub repository.
+- Replaces the current script with the downloaded version.
+- Ensures the script is always up-to-date with the latest features and fixes.
