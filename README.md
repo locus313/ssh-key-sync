@@ -13,6 +13,7 @@ This Bash script pulls `authorized_keys` files from remote URLs and updates SSH 
 - Safe: Only updates keys if they’ve changed
 - Logs activity per user
 - Retries failed fetch operations up to 3 times with a delay
+- **Self-update**: Automatically updates the script to the latest version from the GitHub repository
 
 ## ⚙️ Configuration
 
@@ -55,6 +56,10 @@ declare -A USER_KEYS=(
    ```cron
    */15 * * * * /usr/local/bin/sync-ssh-keys.sh >> /var/log/ssh-key-sync.log 2>&1
    ```
+5. To update the script to the latest version, run:
+   ```bash
+   ./sync-ssh-keys.sh --self-update
+   ```
 
 ## Implementation Notes
 
@@ -63,6 +68,7 @@ declare -A USER_KEYS=(
 - Includes a retry mechanism for failed fetch operations (3 attempts with a 2-second delay).
 - Only updates a user's `authorized_keys` if the remote file has changed.
 - Logs all actions with timestamps.
+- The `--self-update` option fetches the latest version of the script from the GitHub repository and replaces the current version.
 
 ## Examples
 
