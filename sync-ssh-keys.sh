@@ -461,16 +461,25 @@ main() {
   fi
   
   # Load and validate configuration
+  log_info "Loading configuration..."
   load_configuration
+  log_info "Configuration loaded successfully"
+  
+  log_info "Validating configuration..."
   validate_configuration
+  log_info "Configuration validated successfully"
   
   # Validate USER_KEYS array has entries
-  local user_count=0
+  log_info "Counting users..."
+  user_count=0
   if declare -p USER_KEYS &>/dev/null; then
     for username in "${!USER_KEYS[@]}"; do
-      ((user_count++))
+      log_info "Found user: $username"
+      user_count=$((user_count + 1))
+      log_info "User count now: $user_count"
     done
   fi
+  log_info "Total user count: $user_count"
   
   if [[ $user_count -eq 0 ]]; then
     log_warning "No users defined in USER_KEYS array. Nothing to do."
