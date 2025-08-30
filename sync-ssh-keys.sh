@@ -8,10 +8,12 @@ set -euo pipefail
 
 # shellcheck disable=SC2034  # planned to be used in a future release
 readonly SCRIPT_VERSION="0.1.0"
-readonly SCRIPT_NAME="$(basename "$0")"
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
 
 # === Configuration and Constants ===
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly CONFIG_FILE="$SCRIPT_DIR/users.conf"
 readonly DEFAULT_RETRIES=3
 readonly DEFAULT_RETRY_DELAY=2
@@ -228,7 +230,7 @@ self_update() {
   fi
 
   # Ensure cleanup on exit
-  trap "rm -rf '$temp_dir'" EXIT
+  trap 'rm -rf "$temp_dir"' EXIT
 
   # Download and validate
   if ! download_latest_script "$latest_url" "$temp_dir"; then
@@ -452,6 +454,7 @@ main() {
   parse_arguments "$@"
   
   # Source configuration file at global scope
+  # shellcheck source=users.conf
   if ! source "$CONFIG_FILE"; then
     log_error "Failed to load configuration file 'users.conf'. Please check the file for syntax errors. Halting execution."
     exit 1
@@ -464,7 +467,7 @@ main() {
   # Validate USER_KEYS array has entries
   local user_count=0
   if declare -p USER_KEYS &>/dev/null; then
-    for user in "${!USER_KEYS[@]}"; do
+    for username in "${!USER_KEYS[@]}"; do
       ((user_count++))
     done
   fi
