@@ -196,7 +196,7 @@ get_latest_release_url() {
   local repo="$1"
   local api_url="https://api.github.com/repos/$repo/releases/latest"
   
-  log_info "Fetching latest release information..."
+  log_info "Fetching latest release information..." >&2
   
   if ! curl -fsSL "$api_url" | grep "browser_download_url" | grep "sync-ssh-keys.sh" | cut -d '"' -f 4; then
     log_error "Could not determine the latest version URL from GitHub API"
