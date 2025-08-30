@@ -3,7 +3,7 @@
 [![Lint Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/lint.yml?style=flat-square&label=lint)](https://github.com/locus313/ssh-key-sync/actions)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Shell](https://img.shields.io/badge/Shell-Bash-green?style=flat-square&logo=gnu-bash)](https://www.gnu.org/software/bash/)
-[![Version](https://img.shields.io/badge/Version-0.1.1-orange?style=flat-square)](https://github.com/locus313/ssh-key-sync/releases)
+[![Version](https://img.shields.io/badge/Version-0.1.2-orange?style=flat-square)](https://github.com/locus313/ssh-key-sync/releases)
 
 ⭐ If you like this project, star it on GitHub — it helps a lot!
 
