@@ -48,9 +48,9 @@ jobs:
           # Test user key mapping with public GitHub users
           declare -A USER_KEYS=(
             # Test with a known GitHub user that has public keys
-            ["testuser1"]="ghuser:octocat"
+            ["testuser1"]="ghuser:locus313"
             # Test with raw public key (using GitHub's public key endpoint)
-            ["testuser2"]="raw:https://github.com/octocat.keys"
+            ["testuser2"]="raw:https://github.com/locus313.keys"
           )
           EOF
 
@@ -137,7 +137,7 @@ jobs:
       - name: Test GitHub user key fetching (mock)
         run: |
           # Test the curl command format for GitHub user keys
-          curl -fsSL "https://github.com/octocat.keys" | head -5
+          curl -fsSL "https://github.com/locus313.keys" | head -2
           echo "✓ GitHub user key endpoint is accessible"
 
       - name: Test script version extraction
@@ -224,31 +224,34 @@ jobs:
           # Integration test configuration
           declare -A USER_KEYS=(
             # Use a real GitHub user with known public keys for integration testing
-            ["integrationuser"]="ghuser:octocat"
+            ["integrationuser"]="ghuser:locus313"
           )
           EOF
 
       - name: Run integration test
         run: |
-          # Run the script and verify it completes successfully
-          ./sync-ssh-keys.sh
+          # Run the script with sudo and verify it completes successfully
+          sudo ./sync-ssh-keys.sh
           
           # Verify the authorized_keys file was created
-          if [[ -f /home/integrationuser/.ssh/authorized_keys ]]; then
+          if sudo test -f /home/integrationuser/.ssh/authorized_keys; then
             echo "✓ authorized_keys file created successfully"
             echo "File contents:"
-            head -2 /home/integrationuser/.ssh/authorized_keys
+            sudo head -2 /home/integrationuser/.ssh/authorized_keys
             echo "File permissions:"
-            ls -la /home/integrationuser/.ssh/authorized_keys
+            sudo ls -la /home/integrationuser/.ssh/authorized_keys
           else
             echo "✗ authorized_keys file was not created"
+            echo "Directory contents:"
+            sudo ls -la /home/integrationuser/ || true
+            sudo ls -la /home/integrationuser/.ssh/ || true
             exit 1
           fi
 
       - name: Verify file permissions
         run: |
           # Check SSH directory permissions
-          PERMS=$(stat -c "%a" /home/integrationuser/.ssh)
+          PERMS=$(sudo stat -c "%a" /home/integrationuser/.ssh)
           if [[ "$PERMS" == "700" ]]; then
             echo "✓ SSH directory permissions are correct (700)"
           else
@@ -257,7 +260,7 @@ jobs:
           fi
           
           # Check authorized_keys file permissions
-          PERMS=$(stat -c "%a" /home/integrationuser/.ssh/authorized_keys)
+          PERMS=$(sudo stat -c "%a" /home/integrationuser/.ssh/authorized_keys)
           if [[ "$PERMS" == "600" ]]; then
             echo "✓ authorized_keys file permissions are correct (600)"
           else
