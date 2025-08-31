@@ -7,6 +7,7 @@ on:
     paths:
       - 'sync-ssh-keys.sh'
       - 'users.conf'
+      - '.github/workflows/check-version.yml'
 
 jobs:
   check-version:

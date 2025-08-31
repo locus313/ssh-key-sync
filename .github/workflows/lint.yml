@@ -6,6 +6,14 @@ on:
       - main
     paths:
       - 'sync-ssh-keys.sh'
+      - 'users.conf'
+      - '.github/workflows/lint.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'sync-ssh-keys.sh'
+      - 'users.conf'
       - '.github/workflows/lint.yml'
 
 jobs:
