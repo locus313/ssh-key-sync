@@ -121,6 +121,7 @@ declare -A USER_KEYS=()
 EOF
   
   # Test that config has valid syntax and can be sourced
+  # shellcheck disable=SC1090  # Dynamic source path is intentional for testing
   bash -n "$test_config" && source "$test_config"
   local result=$?
   rm -f "$test_config"
