@@ -18,6 +18,7 @@ on:
       - 'sync-ssh-keys.sh'
       - 'users.conf'
       - '.github/workflows/test.yml'
+  workflow_call:
 
 jobs:
   test:

@@ -23,7 +23,7 @@ jobs:
   # Final status check
   ci-success:
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, test, version-check]
     if: always()
     steps:
       - name: Check all jobs status
