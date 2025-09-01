@@ -8,6 +8,7 @@ on:
       - 'sync-ssh-keys.sh'
       - 'users.conf'
       - '.github/workflows/check-version.yml'
+  workflow_call:
 
 jobs:
   check-version:
