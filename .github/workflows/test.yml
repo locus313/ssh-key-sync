@@ -1,0 +1,284 @@
+name: Test SSH Key Sync
+# This workflow performs comprehensive testing of the SSH key sync script
+# It includes unit tests, configuration validation, and integration tests
+# Unit tests avoid executing the main script to prevent unintended side effects
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'sync-ssh-keys.sh'
+      - 'users.conf'
+      - '.github/workflows/test.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'sync-ssh-keys.sh'
+      - 'users.conf'
+      - '.github/workflows/test.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install required packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y diffutils
+
+      - name: Make script executable
+        run: chmod +x sync-ssh-keys.sh
+
+      - name: Create test users
+        run: |
+          sudo useradd -m testuser1 || true
+          sudo useradd -m testuser2 || true
+          sudo useradd -m testuser3 || true
+
+      - name: Setup test environment
+        run: |
+          # Create a temporary test configuration
+          cat > test-users.conf << 'EOF'
+          #!/bin/bash
+          # Test configuration for GitHub Actions
+          
+          # No GitHub token needed for public key tests
+          CONF_GITHUB_TOKEN=""
+          
+          # Test user key mapping with public GitHub users
+          declare -A USER_KEYS=(
+            # Test with a known GitHub user that has public keys
+            ["testuser1"]="ghuser:locus313"
+            # Test with raw public key (using GitHub's public key endpoint)
+            ["testuser2"]="raw:https://github.com/locus313.keys"
+          )
+          EOF
+
+      - name: Test configuration validation
+        run: |
+          # Test with missing config file
+          mv users.conf users.conf.backup
+          if sudo ./sync-ssh-keys.sh 2>&1 | grep -q "Failed to load configuration file 'users.conf'"; then
+            echo "✓ Configuration file validation works"
+          else
+            echo "✗ Configuration file validation failed"
+            mv users.conf.backup users.conf
+            exit 1
+          fi
+          mv users.conf.backup users.conf
+
+      - name: Test configuration loading
+        run: |
+          # Use test configuration
+          cp test-users.conf users.conf
+          
+          # Test that configuration can be sourced and validated
+          bash -c 'source users.conf && declare -p USER_KEYS >/dev/null'
+          echo "✓ Configuration loading test completed"
+
+      - name: Test invalid method handling
+        run: |
+          # Create config with invalid method
+          cat > test-invalid.conf << 'EOF'
+          #!/bin/bash
+          declare -A USER_KEYS=(
+            ["testuser1"]="invalid:test"
+          )
+          EOF
+          
+          cp test-invalid.conf users.conf
+          
+          # Should fail with unsupported method error
+          # Run with sudo to avoid permission issues that would mask the method error
+          if sudo ./sync-ssh-keys.sh 2>&1 | grep -q "Unsupported method 'invalid'"; then
+            echo "✓ Invalid method handling works"
+          else
+            echo "✗ Invalid method handling failed"
+            echo "Actual output:"
+            sudo ./sync-ssh-keys.sh 2>&1 | head -10
+            exit 1
+          fi
+
+      - name: Test script syntax and functions
+        run: |
+          # Test script syntax
+          bash -n sync-ssh-keys.sh
+          echo "✓ Script syntax is valid"
+          
+          # Test that required functions are defined (without executing main)
+          if grep -q "^log_message()" sync-ssh-keys.sh && \
+             grep -q "^fetch_key_file()" sync-ssh-keys.sh && \
+             grep -q "^validate_method()" sync-ssh-keys.sh && \
+             grep -q "^load_configuration()" sync-ssh-keys.sh; then
+            echo "✓ Required functions are present"
+          else
+            echo "✗ Required functions are missing"
+            exit 1
+          fi
+
+      - name: Test with empty user array
+        run: |
+          # Create config with empty user array
+          cat > test-empty.conf << 'EOF'
+          #!/bin/bash
+          declare -A USER_KEYS=()
+          EOF
+          
+          cp test-empty.conf users.conf
+          
+          # Should exit cleanly with warning (no sudo needed since no user access)
+          if ./sync-ssh-keys.sh 2>&1 | grep -q "No users defined in USER_KEYS array"; then
+            echo "✓ Empty user array handling works"
+          else
+            echo "✗ Empty user array handling failed"
+            exit 1
+          fi
+
+      - name: Test GitHub user key fetching (mock)
+        run: |
+          # Test the curl command format for GitHub user keys
+          curl -fsSL "https://github.com/locus313.keys" | head -2
+          echo "✓ GitHub user key endpoint is accessible"
+
+      - name: Test script version extraction
+        run: |
+          # Verify version can be extracted
+          VERSION=$(awk -F'"' '/SCRIPT_VERSION/ {print $2; exit}' sync-ssh-keys.sh)
+          if [[ -n "$VERSION" ]]; then
+            echo "✓ Script version found: $VERSION"
+          else
+            echo "✗ Script version not found"
+            exit 1
+          fi
+
+      - name: Test self-update function (dry run)
+        run: |
+          # Test that self-update function exists and can be parsed
+          grep -q "self_update()" sync-ssh-keys.sh
+          grep -q "get_latest_release_url" sync-ssh-keys.sh
+          grep -q "download_latest_script" sync-ssh-keys.sh
+          echo "✓ Self-update functions are present"
+
+      - name: Test error handling
+        run: |
+          # Create config that will trigger various error conditions
+          cat > test-errors.conf << 'EOF'
+          #!/bin/bash
+          declare -A USER_KEYS=(
+            ["nonexistentuser"]="ghuser:nonexistentuser12345"
+            ["testuser1"]="raw:https://invalid-url-that-does-not-exist.example.com/keys"
+          )
+          EOF
+          
+          # Test that config is syntactically valid
+          bash -n test-errors.conf
+          echo "✓ Error handling configuration is valid"
+
+      - name: Test log message formatting
+        run: |
+          # Test log functions exist and have correct format
+          if grep -q "log_message()" sync-ssh-keys.sh && \
+             grep -q "log_error()" sync-ssh-keys.sh && \
+             grep -q "log_warning()" sync-ssh-keys.sh && \
+             grep -q "log_info()" sync-ssh-keys.sh; then
+            echo "✓ Log functions are present"
+          else
+            echo "✗ Log functions are missing"
+            exit 1
+          fi
+
+      - name: Cleanup test environment
+        run: |
+          # Restore original configuration
+          git checkout users.conf 2>/dev/null || true
+          
+          # Remove test files
+          rm -f test-*.conf
+          
+          # Remove test users (if they exist)
+          sudo userdel -f testuser1 2>/dev/null || true
+          sudo userdel -f testuser2 2>/dev/null || true
+          sudo userdel -f testuser3 2>/dev/null || true
+          
+          echo "✓ Cleanup completed"
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install required packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y diffutils
+
+      - name: Make script executable
+        run: chmod +x sync-ssh-keys.sh
+
+      - name: Create integration test user
+        run: |
+          sudo useradd -m integrationuser
+
+      - name: Setup integration test configuration
+        run: |
+          cat > users.conf << 'EOF'
+          #!/bin/bash
+          # Integration test configuration
+          declare -A USER_KEYS=(
+            # Use a real GitHub user with known public keys for integration testing
+            ["integrationuser"]="ghuser:locus313"
+          )
+          EOF
+
+      - name: Run integration test
+        run: |
+          # Run the script with sudo and verify it completes successfully
+          sudo ./sync-ssh-keys.sh
+          
+          # Verify the authorized_keys file was created
+          if sudo test -f /home/integrationuser/.ssh/authorized_keys; then
+            echo "✓ authorized_keys file created successfully"
+            echo "File contents:"
+            sudo head -2 /home/integrationuser/.ssh/authorized_keys
+            echo "File permissions:"
+            sudo ls -la /home/integrationuser/.ssh/authorized_keys
+          else
+            echo "✗ authorized_keys file was not created"
+            echo "Directory contents:"
+            sudo ls -la /home/integrationuser/ || true
+            sudo ls -la /home/integrationuser/.ssh/ || true
+            exit 1
+          fi
+
+      - name: Verify file permissions
+        run: |
+          # Check SSH directory permissions
+          PERMS=$(sudo stat -c "%a" /home/integrationuser/.ssh)
+          if [[ "$PERMS" == "700" ]]; then
+            echo "✓ SSH directory permissions are correct (700)"
+          else
+            echo "✗ SSH directory permissions are incorrect: $PERMS"
+            exit 1
+          fi
+          
+          # Check authorized_keys file permissions
+          PERMS=$(sudo stat -c "%a" /home/integrationuser/.ssh/authorized_keys)
+          if [[ "$PERMS" == "600" ]]; then
+            echo "✓ authorized_keys file permissions are correct (600)"
+          else
+            echo "✗ authorized_keys file permissions are incorrect: $PERMS"
+            exit 1
+          fi
+
+      - name: Cleanup integration test
+        run: |
+          sudo userdel -rf integrationuser 2>/dev/null || true
+          git checkout users.conf

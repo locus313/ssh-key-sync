@@ -7,7 +7,7 @@ set -euo pipefail
 # Repository: https://github.com/locus313/ssh-key-sync
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-readonly SCRIPT_VERSION="0.1.2"
+readonly SCRIPT_VERSION="0.1.3"
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
@@ -322,9 +322,37 @@ update_authorized_keys() {
   local auth_keys_file="$3"
   
   # Check if update is needed
-  if [[ -f "$auth_keys_file" ]] && cmp -s "$temp_file" "$auth_keys_file"; then
-    log_info "No changes detected in authorized_keys for user '$username'"
-    return 0
+  if [[ -f "$auth_keys_file" ]]; then
+    # Use a portable comparison method
+    if command -v cmp >/dev/null 2>&1; then
+      if cmp -s "$temp_file" "$auth_keys_file"; then
+        log_info "No changes detected in authorized_keys for user '$username'"
+        return 0
+      fi
+    elif command -v diff >/dev/null 2>&1; then
+      if diff -q "$temp_file" "$auth_keys_file" >/dev/null 2>&1; then
+        log_info "No changes detected in authorized_keys for user '$username'"
+        return 0
+      fi
+    else
+      # Fallback to checksum comparison if neither cmp nor diff is available
+      local temp_hash auth_hash
+      if command -v sha256sum >/dev/null 2>&1; then
+        temp_hash=$(sha256sum "$temp_file" | cut -d' ' -f1)
+        auth_hash=$(sha256sum "$auth_keys_file" | cut -d' ' -f1)
+      elif command -v md5sum >/dev/null 2>&1; then
+        temp_hash=$(md5sum "$temp_file" | cut -d' ' -f1)
+        auth_hash=$(md5sum "$auth_keys_file" | cut -d' ' -f1)
+      else
+        # Last resort: always update if we can't compare
+        log_warning "No file comparison tools available. Will always update authorized_keys."
+      fi
+      
+      if [[ -n "$temp_hash" && "$temp_hash" == "$auth_hash" ]]; then
+        log_info "No changes detected in authorized_keys for user '$username'"
+        return 0
+      fi
+    fi
   fi
   
   # Perform update
@@ -444,7 +472,7 @@ parse_arguments() {
 
 # Main function
 main() {
-  local temp_files=()
+  temp_files=()
   local failed_users=0
   local processed_users=0
   
@@ -491,24 +519,27 @@ main() {
   
   # Process each user
   for username in "${!USER_KEYS[@]}"; do
-    local temp_file
+    temp_file=""
     if ! temp_file=$(mktemp); then
       log_error "Failed to create temporary file for user '$username'"
-      ((failed_users++))
+      failed_users=$((failed_users + 1))
       continue
     fi
     
     temp_files+=("$temp_file")
-    local entry="${USER_KEYS[$username]}"
+    entry="${USER_KEYS[$username]}"
     
     if process_user_keys "$username" "$entry" "$temp_file"; then
       log_info "Successfully processed user '$username'"
     else
       log_error "Failed to process user '$username'"
-      ((failed_users++))
+      failed_users=$((failed_users + 1))
     fi
     
-    ((processed_users++))
+    processed_users=$((processed_users + 1))
+    
+    # Clean up temp file immediately
+    rm -f "$temp_file"
   done
   
   # Summary
