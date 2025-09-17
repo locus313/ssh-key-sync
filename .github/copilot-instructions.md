@@ -6,85 +6,157 @@ This document provides comprehensive guidance for AI coding agents and contribut
 
 `ssh-key-sync` is a Bash script-based utility for synchronizing SSH `authorized_keys` files for multiple users. It supports fetching keys from various sources, including public URLs, private GitHub repositories, and GitHub user profiles. The configuration is externalized in a `users.conf` file.
 
-## Key Components
+## Key Architecture Components
 
-### Scripts
-- **`sync-ssh-keys.sh`**: The main script that performs the synchronization. It includes:
-  - Support for multiple fetch methods (`raw`, `api`, `ghuser`).
-  - Logging and error handling.
-  - Configuration loading from `users.conf`.
-  - A helper function `fetch_key_file` to handle key retrieval logic with retries for failed operations.
-  - A `--self-update` option to fetch and replace the script with the latest version from the GitHub repository.
+### Core Script Structure (`sync-ssh-keys.sh`)
+The main script follows a modular architecture with distinct functional layers:
 
-### Configuration
-- **`users.conf`**: Defines users and their key sources. Example structure:
-  ```bash
-  CONF_GITHUB_TOKEN="your_github_token_here"
+- **Utility Functions** (lines 24-41): Timestamped logging functions (`log_message`, `log_error`, `log_warning`, `log_info`)
+- **Configuration Management** (lines 43-74): Configuration loading and validation with error handling
+- **Fetch Methods** (lines 76-174): Three distinct key fetching strategies with unified retry logic
+- **Self-Update System** (lines 176-272): Download, validate, and replace script functionality
+- **User Management** (lines 274-443): User validation, SSH directory creation, file permission management
+- **Main Execution** (lines 445-614): Command-line parsing, configuration sourcing, and orchestration
 
-  declare -A USER_KEYS=(
-    ["ubuntu"]="raw:https://example.com/ssh-keys/ubuntu.authorized_keys"
-    ["devuser"]="api:https://api.github.com/repos/yourorg/ssh-keys/contents/keys/devuser.authorized_keys?ref=main"
-    ["alice"]="ghuser:alice-github-username"
-  )
-  ```
+### Configuration Architecture (`users.conf`)
+Configuration uses Bash associative arrays for user-to-source mapping:
+```bash
+CONF_GITHUB_TOKEN="token_here"  # Optional GitHub token
+declare -A USER_KEYS=(
+  ["username"]="method:target"  # method:target pattern
+)
+```
 
-## Developer Workflows
+### Three Key Fetch Methods
+1. **`raw`**: Direct HTTP(S) URL fetching (public endpoints)
+2. **`api`**: GitHub API with authentication (private repositories) 
+3. **`ghuser`**: GitHub user public keys endpoint (`github.com/username.keys`)
 
-### Running the Script
-1. Ensure `sync-ssh-keys.sh` is executable:
-   ```bash
-   chmod +x sync-ssh-keys.sh
-   ```
-2. Run the script manually:
-   ```bash
-   ./sync-ssh-keys.sh
-   ```
-3. To update the script to the latest version, run:
-   ```bash
-   ./sync-ssh-keys.sh --self-update
-   ```
+## Critical Developer Workflows
 
-### Configuration
-- Edit `users.conf` to define users and their key sources.
-- If using the `api` method, ensure `CONF_GITHUB_TOKEN` is set in `users.conf` or export `GITHUB_TOKEN` in the environment.
+### Testing Commands (Essential for Changes)
+```bash
+# Quick validation - Run before commits
+./test.sh
 
-### Automating with Cron
-- Add the script to root's crontab:
-  ```cron
-  */15 * * * * /path/to/sync-ssh-keys.sh >> /var/log/ssh-key-sync.log 2>&1
-  ```
+# Manual syntax check
+bash -n sync-ssh-keys.sh
 
-### Logging
-- Logs are printed to the console with timestamps.
-- Example log message:
-  ```
-  2025-07-20 12:00:00: Fetching key file for user 'ubuntu' from https://example.com/ssh-keys/ubuntu.authorized_keys (method: raw)
-  ```
+# ShellCheck validation (if available)
+shellcheck sync-ssh-keys.sh
 
-## Coding Conventions
+# Test with actual users (requires root)
+sudo ./sync-ssh-keys.sh
+```
 
-- Use meaningful variable and function names.
-- Follow the existing code style in `sync-ssh-keys.sh`.
-- Add comments for complex logic.
-- Use environment variables for sensitive data (e.g., `GITHUB_TOKEN`).
-- Ensure temporary files are cleaned up using `trap`.
+### CI/CD Pipeline Structure
+The project uses a sophisticated multi-workflow CI system:
+- **`ci.yml`**: Orchestrates all checks (lint, test, version validation)
+- **`test.yml`**: Creates real users, tests all fetch methods, validates error handling
+- **`lint.yml`**: ShellCheck static analysis
+- **`check-version.yml`**: Ensures version bumps in PRs
+
+### Configuration Testing Pattern
+Always test configuration changes with temporary configs:
+```bash
+cp users.conf users.conf.backup
+# Edit users.conf with test values
+sudo ./sync-ssh-keys.sh
+mv users.conf.backup users.conf
+```
+
+### Error Handling Architecture
+The script uses a **defensive programming** approach:
+- Every function validates parameters and returns meaningful exit codes
+- Network operations include retry logic (3 attempts, 2-second delays)
+- Temporary file cleanup using `trap` statements
+- File comparison before updates to avoid unnecessary writes
+
+### Self-Update Mechanism
+The `--self-update` feature demonstrates key patterns:
+- GitHub API integration for release information
+- Temporary file management with cleanup
+- Script validation before replacement
+- Atomic replacement to prevent corruption
+
+## Project-Specific Conventions
+
+### Function Organization Pattern
+Functions are grouped by responsibility with clear boundaries:
+- **Utilities**: Pure functions for logging (prefix: `log_`)
+- **Configuration**: Loading and validation (prefix: `load_`, `validate_`)
+- **Fetching**: Key retrieval methods (prefix: `fetch_`)
+- **User Management**: System operations (prefix: `create_`, `update_`, `process_`)
+
+### Error Handling Style
+- Use meaningful exit codes: `return 1` for failures, `return 0` for success
+- Log errors before returning: `log_error "message"; return 1`
+- Validate parameters at function start: `[[ -z "$param" ]] && { log_error "message"; return 1; }`
+
+### Bash Patterns Used
+- `set -euo pipefail` for strict error handling
+- Associative arrays for configuration: `declare -A USER_KEYS`
+- Here documents for multi-line content in tests
+- Parameter expansion for parsing: `${entry%%:*}` and `${entry#*:}`
+
+### File Permission Management
+Critical pattern - always set correct permissions:
+```bash
+chown "$username:$username" "$file"  # User ownership
+chmod 700 "$ssh_dir"                 # SSH directory
+chmod 600 "$auth_keys_file"          # authorized_keys file
+```
 
 ## Integration Points
 
-### GitHub API
-- Used for fetching keys from private repositories (`api` method).
-- Requires a GitHub token (`GITHUB_TOKEN` or `CONF_GITHUB_TOKEN`).
+### GitHub API Integration
+- **Authentication**: Uses `GITHUB_TOKEN` or `CONF_GITHUB_TOKEN`
+- **Headers**: `Authorization: token $GITHUB_TOKEN` and `Accept: application/vnd.github.v3.raw`
+- **Rate Limiting**: Automatic retry logic helps with transient failures
+- **Private Repos**: Full API endpoint format required: `https://api.github.com/repos/org/repo/contents/path?ref=branch`
 
-### System Integration
-- The script ensures the `.ssh` directory and `authorized_keys` file exist for each user.
-- Updates file permissions and ownership as needed.
+### System Dependencies
+- **`curl`**: All HTTP operations with `-fsSL` flags (fail silently, show errors, follow redirects, location headers)
+- **`getent`**: User information retrieval - more reliable than parsing `/etc/passwd`
+- **`mktemp`**: Secure temporary file creation with automatic cleanup
+- **File comparison tools**: `cmp` > `diff` > checksum fallback hierarchy
+
+### File System Integration
+The script manages SSH infrastructure with specific patterns:
+- Creates `.ssh` directories with `700` permissions if missing
+- Compares files before updating to avoid unnecessary writes
+- Uses atomic operations (temp file → move) for updates
+- Maintains proper ownership chain: directory → file → permissions
 
 ## Contribution Guidelines
 
-- Include a clear description of changes in pull requests.
-- Reference related issues.
-- Ensure the script passes linting (e.g., using `shellcheck`).
-- Test changes locally before submission.
+### Pre-Commit Validation
+```bash
+# Required: Syntax check
+bash -n sync-ssh-keys.sh
+
+# Required: Run test suite
+./test.sh
+
+# Recommended: Static analysis (if available)
+shellcheck sync-ssh-keys.sh
+```
+
+### Version Management
+- Bump `SCRIPT_VERSION` in PRs (enforced by CI)
+- Follow semantic versioning (major.minor.patch)
+- Version check workflow prevents duplicate releases
+
+### Code Quality Standards
+- All functions must validate input parameters
+- Use `log_error` before `return 1` in error conditions
+- Maintain consistent indentation (2 spaces)
+- Group related functions with clear section comments
+
+### Testing Requirements
+- New fetch methods need integration tests in `test.yml`
+- Configuration changes require validation tests
+- Error conditions must be tested with invalid inputs
 
 ## Examples
 
