@@ -1,13 +1,6 @@
 name: Check Script Version
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'sync-ssh-keys.sh'
-      - 'users.conf'
-      - '.github/workflows/check-version.yml'
   workflow_call:
 
 jobs:

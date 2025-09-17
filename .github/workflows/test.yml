@@ -4,20 +4,6 @@ name: Test SSH Key Sync
 # Unit tests avoid executing the main script to prevent unintended side effects
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'sync-ssh-keys.sh'
-      - 'users.conf'
-      - '.github/workflows/test.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'sync-ssh-keys.sh'
-      - 'users.conf'
-      - '.github/workflows/test.yml'
   workflow_call:
 
 jobs:
