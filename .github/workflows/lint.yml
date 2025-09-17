@@ -1,20 +1,6 @@
 name: Lint Shell Script
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'sync-ssh-keys.sh'
-      - 'users.conf'
-      - '.github/workflows/lint.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'sync-ssh-keys.sh'
-      - 'users.conf'
-      - '.github/workflows/lint.yml'
   workflow_call:
 
 jobs:
