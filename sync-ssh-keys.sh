@@ -23,24 +23,28 @@ readonly GITHUB_REPO="locus313/ssh-key-sync"
 
 # Log messages with timestamp
 log_message() {
+  local message="$1"
   local timestamp
   timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-  echo "$timestamp: $1"
+  echo "$timestamp: $message"
 }
 
 # Log error messages to stderr
 log_error() {
-  log_message "ERROR: $1" >&2
+  local message="$1"
+  log_message "ERROR: $message" >&2
 }
 
 # Log warning messages
 log_warning() {
-  log_message "WARNING: $1"
+  local message="$1"
+  log_message "WARNING: $message"
 }
 
 # Log info messages
 log_info() {
-  log_message "INFO: $1"
+  local message="$1"
+  log_message "INFO: $message"
 }
 
 # === Configuration Loading ===
@@ -89,6 +93,11 @@ fetch_raw_key() {
   local url="$1"
   local output_file="$2"
   
+  if [[ -z "$url" ]]; then
+    log_error "URL parameter is required for raw method"
+    return 1
+  fi
+  
   curl -fsSL "$url" -o "$output_file"
 }
 
@@ -96,6 +105,11 @@ fetch_raw_key() {
 fetch_api_key() {
   local url="$1"
   local output_file="$2"
+  
+  if [[ -z "$url" ]]; then
+    log_error "URL parameter is required for API method"
+    return 1
+  fi
   
   if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     log_error "GITHUB_TOKEN is required for API access"
@@ -113,6 +127,11 @@ fetch_ghuser_key() {
   local username="$1"
   local output_file="$2"
   
+  if [[ -z "$username" ]]; then
+    log_error "Username parameter is required for ghuser method"
+    return 1
+  fi
+  
   curl -fsSL "https://github.com/${username}.keys" -o "$output_file"
 }
 
@@ -123,6 +142,22 @@ fetch_key_file() {
   local output_file="$3"
   local retries="${4:-$DEFAULT_RETRIES}"
   local retry_delay="${5:-$DEFAULT_RETRY_DELAY}"
+
+  # Validate required parameters
+  if [[ -z "$method" ]]; then
+    log_error "Method parameter is required"
+    return 1
+  fi
+  
+  if [[ -z "$target" ]]; then
+    log_error "Target parameter is required"
+    return 1
+  fi
+  
+  if [[ -z "$output_file" ]]; then
+    log_error "Output file parameter is required"
+    return 1
+  fi
 
   # Validate method
   if ! validate_method "$method"; then
@@ -196,12 +231,20 @@ get_latest_release_url() {
   local repo="$1"
   local api_url="https://api.github.com/repos/$repo/releases/latest"
   
-  log_info "Fetching latest release information..." >&2
+  log_info "Fetching latest release information..."
   
-  if ! curl -fsSL "$api_url" | grep "browser_download_url" | grep "sync-ssh-keys.sh" | cut -d '"' -f 4; then
+  local download_url
+  if ! download_url=$(curl -fsSL "$api_url" | grep "browser_download_url" | grep "sync-ssh-keys.sh" | cut -d '"' -f 4); then
     log_error "Could not determine the latest version URL from GitHub API"
     return 1
   fi
+  
+  if [[ -z "$download_url" ]]; then
+    log_error "No download URL found for sync-ssh-keys.sh in latest release"
+    return 1
+  fi
+  
+  echo "$download_url"
 }
 
 # Perform self-update of the script
@@ -215,11 +258,6 @@ self_update() {
   # Get latest release URL
   if ! latest_url=$(get_latest_release_url "$GITHUB_REPO"); then
     log_error "Failed to get latest release URL"
-    exit 1
-  fi
-
-  if [[ -z "$latest_url" ]]; then
-    log_error "Latest release URL is empty"
     exit 1
   fi
 
@@ -321,38 +359,10 @@ update_authorized_keys() {
   local temp_file="$2"
   local auth_keys_file="$3"
   
-  # Check if update is needed
-  if [[ -f "$auth_keys_file" ]]; then
-    # Use a portable comparison method
-    if command -v cmp >/dev/null 2>&1; then
-      if cmp -s "$temp_file" "$auth_keys_file"; then
-        log_info "No changes detected in authorized_keys for user '$username'"
-        return 0
-      fi
-    elif command -v diff >/dev/null 2>&1; then
-      if diff -q "$temp_file" "$auth_keys_file" >/dev/null 2>&1; then
-        log_info "No changes detected in authorized_keys for user '$username'"
-        return 0
-      fi
-    else
-      # Fallback to checksum comparison if neither cmp nor diff is available
-      local temp_hash auth_hash
-      if command -v sha256sum >/dev/null 2>&1; then
-        temp_hash=$(sha256sum "$temp_file" | cut -d' ' -f1)
-        auth_hash=$(sha256sum "$auth_keys_file" | cut -d' ' -f1)
-      elif command -v md5sum >/dev/null 2>&1; then
-        temp_hash=$(md5sum "$temp_file" | cut -d' ' -f1)
-        auth_hash=$(md5sum "$auth_keys_file" | cut -d' ' -f1)
-      else
-        # Last resort: always update if we can't compare
-        log_warning "No file comparison tools available. Will always update authorized_keys."
-      fi
-      
-      if [[ -n "$temp_hash" && "$temp_hash" == "$auth_hash" ]]; then
-        log_info "No changes detected in authorized_keys for user '$username'"
-        return 0
-      fi
-    fi
+  # Check if update is needed by comparing files
+  if [[ -f "$auth_keys_file" ]] && files_are_identical "$temp_file" "$auth_keys_file"; then
+    log_info "No changes detected in authorized_keys for user '$username'"
+    return 0
   fi
   
   # Perform update
@@ -381,15 +391,66 @@ update_authorized_keys() {
   return 0
 }
 
+# Compare two files to check if they are identical
+files_are_identical() {
+  local file1="$1"
+  local file2="$2"
+  
+  # Use a portable comparison method
+  if command -v cmp >/dev/null 2>&1; then
+    cmp -s "$file1" "$file2"
+  elif command -v diff >/dev/null 2>&1; then
+    diff -q "$file1" "$file2" >/dev/null 2>&1
+  else
+    # Fallback to checksum comparison if neither cmp nor diff is available
+    local file1_hash file2_hash
+    if command -v sha256sum >/dev/null 2>&1; then
+      file1_hash=$(sha256sum "$file1" | cut -d' ' -f1)
+      file2_hash=$(sha256sum "$file2" | cut -d' ' -f1)
+    elif command -v md5sum >/dev/null 2>&1; then
+      file1_hash=$(md5sum "$file1" | cut -d' ' -f1)
+      file2_hash=$(md5sum "$file2" | cut -d' ' -f1)
+    else
+      # Last resort: always update if we can't compare
+      log_warning "No file comparison tools available. Will always update authorized_keys."
+      return 1
+    fi
+    
+    [[ -n "$file1_hash" && "$file1_hash" == "$file2_hash" ]]
+  fi
+}
+
 # Process a single user's SSH keys
 process_user_keys() {
   local username="$1"
   local entry="$2"
   local temp_file="$3"
   
+  # Validate required parameters
+  if [[ -z "$username" ]]; then
+    log_error "Username parameter is required"
+    return 1
+  fi
+  
+  if [[ -z "$entry" ]]; then
+    log_error "Entry parameter is required for user '$username'"
+    return 1
+  fi
+  
+  if [[ -z "$temp_file" ]]; then
+    log_error "Temporary file parameter is required for user '$username'"
+    return 1
+  fi
+  
   # Parse method and target from entry
   local method="${entry%%:*}"
   local target="${entry#*:}"
+  
+  # Validate that we actually have both method and target
+  if [[ "$method" == "$entry" ]]; then
+    log_error "Invalid entry format for user '$username'. Expected format: method:target"
+    return 1
+  fi
   
   # Validate user exists
   if ! validate_user "$username"; then
@@ -472,7 +533,7 @@ parse_arguments() {
 
 # Main function
 main() {
-  temp_files=()
+  local temp_files=()
   local failed_users=0
   local processed_users=0
   
@@ -497,17 +558,15 @@ main() {
   validate_configuration
   log_info "Configuration validated successfully"
   
-  # Validate USER_KEYS array has entries
-  log_info "Counting users..."
-  user_count=0
+  # Count users defined in USER_KEYS array
+  local user_count=0
   if declare -p USER_KEYS &>/dev/null; then
     for username in "${!USER_KEYS[@]}"; do
-      log_info "Found user: $username"
       user_count=$((user_count + 1))
-      log_info "User count now: $user_count"
     done
   fi
-  log_info "Total user count: $user_count"
+  
+  log_info "Found $user_count user(s) to process"
   
   if [[ $user_count -eq 0 ]]; then
     log_warning "No users defined in USER_KEYS array. Nothing to do."
@@ -519,7 +578,7 @@ main() {
   
   # Process each user
   for username in "${!USER_KEYS[@]}"; do
-    temp_file=""
+    local temp_file=""
     if ! temp_file=$(mktemp); then
       log_error "Failed to create temporary file for user '$username'"
       failed_users=$((failed_users + 1))
@@ -527,7 +586,7 @@ main() {
     fi
     
     temp_files+=("$temp_file")
-    entry="${USER_KEYS[$username]}"
+    local entry="${USER_KEYS[$username]}"
     
     if process_user_keys "$username" "$entry" "$temp_file"; then
       log_info "Successfully processed user '$username'"
@@ -538,7 +597,7 @@ main() {
     
     processed_users=$((processed_users + 1))
     
-    # Clean up temp file immediately
+    # Clean up temp file immediately after processing
     rm -f "$temp_file"
   done
   
