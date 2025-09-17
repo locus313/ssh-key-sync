@@ -7,7 +7,7 @@ set -euo pipefail
 # Repository: https://github.com/locus313/ssh-key-sync
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-readonly SCRIPT_VERSION="0.1.4"
+readonly SCRIPT_VERSION="0.1.5"
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
