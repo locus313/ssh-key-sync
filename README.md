@@ -1,8 +1,6 @@
 # SSH Key Sync
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/ci.yml?style=flat-square&label=CI)](https://github.com/locus313/ssh-key-sync/actions)
-[![Test Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/test.yml?style=flat-square&label=Tests)](https://github.com/locus313/ssh-key-sync/actions)
-[![Lint Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/lint.yml?style=flat-square&label=Lint)](https://github.com/locus313/ssh-key-sync/actions)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/ci.yml?style=flat-square&label=CI)](https://github.com/locus313/ssh-key-sync/actions)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-green?style=flat-square&logo=gnu-bash)](https://www.gnu.org/software/bash/)
 [![Version](https://img.shields.io/badge/Version-0.1.5-orange?style=flat-square)](https://github.com/locus313/ssh-key-sync/releases)
@@ -522,13 +520,18 @@ The project includes comprehensive testing infrastructure to ensure reliability 
 
 ### Automated Testing Pipeline
 
-[![Test Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/test.yml?style=flat-square&label=Tests)](https://github.com/locus313/ssh-key-sync/actions)
-[![Lint Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/lint.yml?style=flat-square&label=ShellCheck)](https://github.com/locus313/ssh-key-sync/actions)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/ci.yml?style=flat-square&label=CI)](https://github.com/locus313/ssh-key-sync/actions)
 
-- **CI/CD Workflows** - Automated testing on every pull request and commit
+The project uses a **centralized CI workflow** that orchestrates all testing and validation:
+
+- **Lint Check** - ShellCheck static analysis for code quality and best practices
+- **Version Check** - Ensures version bumps in pull requests for proper release management
+- **Integration Tests** - Real user creation, SSH key synchronization, and error handling validation
 - **Multi-Environment Testing** - Validation across different Linux distributions
-- **Integration Tests** - Real user creation and SSH key synchronization
-- **Security Scanning** - Static analysis with ShellCheck for best practices
+- **Security Focus** - Proper permissions, file handling, and authentication validation
+
+> [!NOTE]
+> **Workflow Architecture**: The CI workflow calls individual test workflows (`lint.yml`, `test.yml`, `check-version.yml`) as reusable workflows, preventing duplicate runs while maintaining organized test separation.
 
 ### Running Tests Locally
 
