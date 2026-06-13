@@ -324,10 +324,28 @@ get_user_home() {
   echo "$user_home"
 }
 
+get_user_gid() {
+  local username="$1"
+  local user_gid
+  
+  if ! user_gid=$(getent passwd "$username" | cut -d: -f4); then
+    log_error "Failed to get GID for user '$username'"
+    return 1
+  fi
+  
+  if [[ -z "$user_gid" ]]; then
+    log_error "Failed to determine GID for user '$username'"
+    return 1
+  fi
+  
+  echo "$user_gid"
+}
+
 # Create SSH directory with proper permissions
 create_ssh_directory() {
   local username="$1"
   local ssh_dir="$2"
+  local user_gid
   
   if [[ -d "$ssh_dir" ]]; then
     return 0
@@ -340,7 +358,11 @@ create_ssh_directory() {
     return 1
   fi
   
-  if ! chown "$username:$username" "$ssh_dir"; then
+  if ! user_gid=$(get_user_gid "$username"); then
+    return 1
+  fi
+  
+  if ! chown "$username:$user_gid" "$ssh_dir"; then
     log_error "Failed to set ownership of .ssh directory for user '$username'"
     return 1
   fi
@@ -358,6 +380,7 @@ update_authorized_keys() {
   local username="$1"
   local temp_file="$2"
   local auth_keys_file="$3"
+  local user_gid
   
   # Check if update is needed by comparing files
   if [[ -f "$auth_keys_file" ]] && files_are_identical "$temp_file" "$auth_keys_file"; then
@@ -377,7 +400,11 @@ update_authorized_keys() {
     return 1
   fi
   
-  if ! chown "$username:$username" "$auth_keys_file"; then
+  if ! user_gid=$(get_user_gid "$username"); then
+    return 1
+  fi
+  
+  if ! chown "$username:$user_gid" "$auth_keys_file"; then
     log_error "Failed to set ownership of authorized_keys file for user '$username'"
     return 1
   fi
