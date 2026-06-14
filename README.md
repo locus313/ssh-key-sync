@@ -3,7 +3,7 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/ci.yml?style=flat-square&label=CI)](https://github.com/locus313/ssh-key-sync/actions)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-green?style=flat-square&logo=gnu-bash)](https://www.gnu.org/software/bash/)
-[![Version](https://img.shields.io/badge/Version-0.1.5-orange?style=flat-square)](https://github.com/locus313/ssh-key-sync/releases)
+[![Version](https://img.shields.io/badge/Version-0.1.8-orange?style=flat-square)](https://github.com/locus313/ssh-key-sync/releases)
 
 *Synchronize SSH authorized_keys for multiple users from various sources*
 
@@ -499,7 +499,7 @@ Understanding log output:
 
 ```bash
 # Successful execution logs
-2025-09-17 12:00:00: Starting SSH key synchronization (version 0.1.5)
+2025-09-17 12:00:00: Starting SSH key synchronization (version 0.1.8)
 2025-09-17 12:00:01: Loading configuration...
 2025-09-17 12:00:01: Found 3 user(s) to process
 2025-09-17 12:00:02: Fetching key file for alice from https://github.com/alice.keys (method: ghuser)
