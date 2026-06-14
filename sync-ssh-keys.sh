@@ -19,6 +19,9 @@ readonly DEFAULT_RETRIES=3
 readonly DEFAULT_RETRY_DELAY=2
 readonly GITHUB_REPO="locus313/ssh-key-sync"
 
+# Global array for tracking temporary files (must be global for EXIT trap access)
+declare -a temp_files=()
+
 # === Utility Functions ===
 
 # Log messages with timestamp
@@ -560,7 +563,6 @@ parse_arguments() {
 
 # Main function
 main() {
-  local temp_files=()
   local failed_users=0
   local processed_users=0
   
