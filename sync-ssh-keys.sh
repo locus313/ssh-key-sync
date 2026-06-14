@@ -7,7 +7,7 @@ set -euo pipefail
 # Repository: https://github.com/locus313/ssh-key-sync
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-readonly SCRIPT_VERSION="0.1.6"
+readonly SCRIPT_VERSION="0.1.7"
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
@@ -38,13 +38,13 @@ log_error() {
 # Log warning messages
 log_warning() {
   local message="$1"
-  log_message "WARNING: $message"
+  log_message "WARNING: $message" >&2
 }
 
 # Log info messages
 log_info() {
   local message="$1"
-  log_message "INFO: $message"
+  log_message "INFO: $message" >&2
 }
 
 # === Configuration Loading ===
