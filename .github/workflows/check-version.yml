@@ -9,17 +9,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if sync-ssh-keys.sh was modified
+        id: check_changes
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q '^sync-ssh-keys.sh$'; then
+            echo "script_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "script_changed=false" >> $GITHUB_OUTPUT
+            echo "sync-ssh-keys.sh not modified. Skipping version check."
+          fi
 
       - name: Extract SCRIPT_VERSION from sync-ssh-keys.sh
         id: get_version
+        if: steps.check_changes.outputs.script_changed == 'true'
         run: |
           VERSION=$(awk -F'"' '/SCRIPT_VERSION/ {print $2; exit}' sync-ssh-keys.sh)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Fetch tags
-        run: git fetch --tags
-
       - name: Check if version tag exists
+        if: steps.check_changes.outputs.script_changed == 'true'
         run: |
           TAG="v${{ steps.get_version.outputs.version }}"
           if git tag --list | grep -q "^$TAG$"; then
