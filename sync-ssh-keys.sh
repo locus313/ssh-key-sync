@@ -7,7 +7,7 @@ set -euo pipefail
 # Repository: https://github.com/locus313/ssh-key-sync
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-readonly SCRIPT_VERSION="0.1.7"
+readonly SCRIPT_VERSION="0.1.8"
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
@@ -601,7 +601,7 @@ main() {
   fi
   
   # Set up cleanup trap for temporary files
-  trap 'rm -f "${temp_files[@]}"' EXIT
+  trap 'if [[ ${#temp_files[@]} -gt 0 ]]; then rm -f "${temp_files[@]}"; fi' EXIT
   
   # Process each user
   for username in "${!USER_KEYS[@]}"; do
