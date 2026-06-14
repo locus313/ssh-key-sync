@@ -119,7 +119,7 @@ Various test configurations are used:
 - Empty user arrays
 - Error-inducing configurations
 
-### Mock Endpoints
+### External Test Endpoints
 Tests use real but safe endpoints:
 - `https://github.com/octocat.keys` - GitHub's mascot user
 - GitHub API endpoints for public repositories

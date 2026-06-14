@@ -3,7 +3,7 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/ci.yml?style=flat-square&label=CI)](https://github.com/locus313/ssh-key-sync/actions)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-green?style=flat-square&logo=gnu-bash)](https://www.gnu.org/software/bash/)
-[![Version](https://img.shields.io/badge/Version-0.1.8-orange?style=flat-square)](https://github.com/locus313/ssh-key-sync/releases)
+[![Version](https://img.shields.io/github/v/release/locus313/ssh-key-sync?style=flat-square&label=Version&color=orange)](https://github.com/locus313/ssh-key-sync/releases)
 
 *Synchronize SSH authorized_keys for multiple users from various sources*
 
@@ -244,6 +244,9 @@ For accessing private repositories, you'll need a GitHub Personal Access Token:
 
 ## Automation
 
+> [!NOTE]
+> The script loads `users.conf` from the same directory as `sync-ssh-keys.sh`. When deploying to a path like `/opt/ssh-key-sync/`, ensure `users.conf` is placed in that same directory.
+
 ### Production Deployment with Cron
 
 Set up automated synchronization for production environments:
@@ -282,8 +285,8 @@ Create a robust systemd service with automatic restart and monitoring:
    # Security settings
    NoNewPrivileges=true
    ProtectSystem=strict
-   ProtectHome=true
-   ReadWritePaths=/home /root
+   ProtectHome=true            # Makes home directories inaccessible by default
+   ReadWritePaths=/home /root  # Re-opens /home and /root so the script can write authorized_keys
    
    [Install]
    WantedBy=multi-user.target
@@ -340,9 +343,12 @@ jobs:
         
       - name: Sync SSH keys on target servers
         run: |
+          # Add the server's host key to known_hosts before connecting
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
           # Download and run ssh-key-sync
           curl -fsSL https://raw.githubusercontent.com/locus313/ssh-key-sync/main/sync-ssh-keys.sh | \
-          ssh -o StrictHostKeyChecking=no deploy@${{ secrets.SERVER_HOST }} 'cat > sync-ssh-keys.sh && chmod +x sync-ssh-keys.sh && sudo ./sync-ssh-keys.sh'
+          ssh deploy@${{ secrets.SERVER_HOST }} 'cat > sync-ssh-keys.sh && chmod +x sync-ssh-keys.sh && sudo ./sync-ssh-keys.sh'
         env:
           GITHUB_TOKEN: ${{ secrets.SSH_SYNC_TOKEN }}
 ```
@@ -544,9 +550,6 @@ bash -n sync-ssh-keys.sh
 
 # With ShellCheck (recommended)
 shellcheck sync-ssh-keys.sh
-
-# Test with dry-run mode (if implemented)
-./sync-ssh-keys.sh --dry-run
 ```
 
 ### Test Coverage
