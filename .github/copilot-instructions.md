@@ -11,12 +11,12 @@ This document provides comprehensive guidance for AI coding agents and contribut
 ### Core Script Structure (`sync-ssh-keys.sh`)
 The main script follows a modular architecture with distinct functional layers:
 
-- **Utility Functions** (lines 24-41): Timestamped logging functions (`log_message`, `log_error`, `log_warning`, `log_info`)
-- **Configuration Management** (lines 43-74): Configuration loading and validation with error handling
-- **Fetch Methods** (lines 76-174): Three distinct key fetching strategies with unified retry logic
-- **Self-Update System** (lines 176-272): Download, validate, and replace script functionality
-- **User Management** (lines 274-443): User validation, SSH directory creation, file permission management
-- **Main Execution** (lines 445-614): Command-line parsing, configuration sourcing, and orchestration
+- **Utility Functions** (lines 25-52): Timestamped logging functions (`log_message`, `log_error`, `log_warning`, `log_info`)
+- **Configuration Management** (lines 53-77): Configuration loading and validation with error handling
+- **Fetch Methods** (lines 78-201): Method validation, three fetch strategies, and unified retry logic (`validate_method`, `fetch_raw_key`, `fetch_api_key`, `fetch_ghuser_key`, `fetch_key_file`)
+- **Self-Update System** (lines 202-297): Download, validate, and replace script functionality
+- **User Management** (lines 298-519): User validation, GID resolution, SSH directory creation, file permission management (`validate_user`, `get_user_home`, `get_user_gid`, `create_ssh_directory`, `update_authorized_keys`, `files_are_identical`, `process_user_keys`)
+- **Main Execution** (lines 520-642): Command-line parsing, configuration sourcing, and orchestration
 
 ### Configuration Architecture (`users.conf`)
 Configuration uses Bash associative arrays for user-to-source mapping:
@@ -102,9 +102,10 @@ Functions are grouped by responsibility with clear boundaries:
 ### File Permission Management
 Critical pattern - always set correct permissions:
 ```bash
-chown "$username:$username" "$file"  # User ownership
-chmod 700 "$ssh_dir"                 # SSH directory
-chmod 600 "$auth_keys_file"          # authorized_keys file
+user_gid=$(get_user_gid "$username")        # Resolve numeric GID via getent
+chown "$username:$user_gid" "$file"         # User ownership with resolved GID
+chmod 700 "$ssh_dir"                        # SSH directory
+chmod 600 "$auth_keys_file"                 # authorized_keys file
 ```
 
 ## Integration Points
