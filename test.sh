@@ -80,7 +80,14 @@ test_version_defined() {
 
 # Test: Required functions exist
 test_required_functions() {
-  local functions=("log_message" "fetch_key_file" "validate_method" "load_configuration")
+  local functions=(
+    "log_message"
+    "fetch_key_file"
+    "validate_method"
+    "load_configuration"
+    "validate_ssh_directory"
+    "validate_authorized_keys_path"
+  )
   for func in "${functions[@]}"; do
     if ! grep -q "^$func()" "$MAIN_SCRIPT"; then
       return 1

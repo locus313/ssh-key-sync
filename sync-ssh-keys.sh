@@ -7,7 +7,7 @@ set -euo pipefail
 # Repository: https://github.com/locus313/ssh-key-sync
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-readonly SCRIPT_VERSION="0.1.8"
+readonly SCRIPT_VERSION="0.1.9"
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
@@ -344,14 +344,93 @@ get_user_gid() {
   echo "$user_gid"
 }
 
+# Resolve numeric UID for ownership checks (portable Linux/macOS)
+get_path_uid() {
+  local path="$1"
+  if stat -c '%u' "$path" >/dev/null 2>&1; then
+    stat -c '%u' "$path"
+  else
+    stat -f '%u' "$path"
+  fi
+}
+
+# Ensure .ssh is a real directory (not a symlink), owned by the target user when root
+validate_ssh_directory() {
+  local username="$1"
+  local ssh_dir="$2"
+  local expected_uid actual_uid
+
+  if [[ -L "$ssh_dir" ]]; then
+    log_error "Refusing symlink .ssh directory for user '$username': $ssh_dir"
+    return 1
+  fi
+
+  if [[ ! -d "$ssh_dir" ]]; then
+    log_error ".ssh path is not a directory for user '$username': $ssh_dir"
+    return 1
+  fi
+
+  # When running as root, require the directory to be owned by the target user so
+  # a local account cannot redirect writes into /root/.ssh via a planted symlink.
+  if [[ "$(id -u)" -eq 0 ]]; then
+    if ! expected_uid=$(id -u "$username" 2>/dev/null); then
+      log_error "Failed to resolve UID for user '$username'"
+      return 1
+    fi
+    if ! actual_uid=$(get_path_uid "$ssh_dir"); then
+      log_error "Failed to read ownership of .ssh directory for user '$username'"
+      return 1
+    fi
+    if [[ "$actual_uid" != "$expected_uid" ]]; then
+      log_error "Refusing .ssh directory not owned by user '$username': $ssh_dir"
+      return 1
+    fi
+  fi
+
+  return 0
+}
+
+# Refuse to write through a symlink authorized_keys (or under a symlink .ssh)
+validate_authorized_keys_path() {
+  local username="$1"
+  local auth_keys_file="$2"
+  local ssh_dir
+
+  ssh_dir="$(dirname "$auth_keys_file")"
+
+  if [[ -L "$ssh_dir" ]]; then
+    log_error "Refusing authorized_keys under symlink .ssh for user '$username': $ssh_dir"
+    return 1
+  fi
+
+  if [[ -L "$auth_keys_file" ]]; then
+    log_error "Refusing to write through symlink authorized_keys for user '$username': $auth_keys_file"
+    return 1
+  fi
+
+  return 0
+}
+
 # Create SSH directory with proper permissions
 create_ssh_directory() {
   local username="$1"
   local ssh_dir="$2"
   local user_gid
-  
+
+  # -e is false for a dangling symlink; -L catches both dangling and live links.
+  if [[ -L "$ssh_dir" ]]; then
+    log_error "Refusing symlink .ssh directory for user '$username': $ssh_dir"
+    return 1
+  fi
+
   if [[ -d "$ssh_dir" ]]; then
-    return 0
+    validate_ssh_directory "$username" "$ssh_dir"
+    return $?
+  fi
+
+  if [[ -e "$ssh_dir" ]]; then
+    log_error ".ssh path exists and is not a directory for user '$username': $ssh_dir"
+    return 1
   fi
   
   log_info "Creating .ssh directory for user '$username' at $ssh_dir"
@@ -374,8 +453,9 @@ create_ssh_directory() {
     log_error "Failed to set permissions on .ssh directory for user '$username'"
     return 1
   fi
-  
-  return 0
+
+  validate_ssh_directory "$username" "$ssh_dir"
+  return $?
 }
 
 # Update authorized_keys file with proper permissions
@@ -384,6 +464,17 @@ update_authorized_keys() {
   local temp_file="$2"
   local auth_keys_file="$3"
   local user_gid
+  local ssh_dir staging_file
+
+  ssh_dir="$(dirname "$auth_keys_file")"
+
+  if ! validate_ssh_directory "$username" "$ssh_dir"; then
+    return 1
+  fi
+
+  if ! validate_authorized_keys_path "$username" "$auth_keys_file"; then
+    return 1
+  fi
   
   # Check if update is needed by comparing files
   if [[ -f "$auth_keys_file" ]] && files_are_identical "$temp_file" "$auth_keys_file"; then
@@ -397,23 +488,48 @@ update_authorized_keys() {
   else
     log_info "Changes detected in authorized_keys for user '$username'. Updating the file."
   fi
-  
-  if ! cp "$temp_file" "$auth_keys_file"; then
-    log_error "Failed to copy keys to authorized_keys file for user '$username'"
+
+  # Stage in a system temp file (not under $ssh_dir) so a TOCTOU symlink swap
+  # cannot redirect mktemp into /root/.ssh. Re-validate immediately before replace.
+  staging_file="$(mktemp)"
+  temp_files+=("$staging_file")
+
+  if ! cp "$temp_file" "$staging_file"; then
+    log_error "Failed to stage keys for user '$username'"
+    rm -f "$staging_file"
     return 1
   fi
-  
+
   if ! user_gid=$(get_user_gid "$username"); then
+    rm -f "$staging_file"
     return 1
   fi
-  
-  if ! chown "$username:$user_gid" "$auth_keys_file"; then
-    log_error "Failed to set ownership of authorized_keys file for user '$username'"
+
+  if ! chown "$username:$user_gid" "$staging_file"; then
+    log_error "Failed to set ownership of staged authorized_keys for user '$username'"
+    rm -f "$staging_file"
     return 1
   fi
-  
-  if ! chmod 600 "$auth_keys_file"; then
-    log_error "Failed to set permissions on authorized_keys file for user '$username'"
+
+  if ! chmod 600 "$staging_file"; then
+    log_error "Failed to set permissions on staged authorized_keys for user '$username'"
+    rm -f "$staging_file"
+    return 1
+  fi
+
+  # Re-check immediately before replace (TOCTOU)
+  if ! validate_ssh_directory "$username" "$ssh_dir"; then
+    rm -f "$staging_file"
+    return 1
+  fi
+  if ! validate_authorized_keys_path "$username" "$auth_keys_file"; then
+    rm -f "$staging_file"
+    return 1
+  fi
+
+  if ! mv -f "$staging_file" "$auth_keys_file"; then
+    log_error "Failed to install authorized_keys for user '$username'"
+    rm -f "$staging_file"
     return 1
   fi
   
