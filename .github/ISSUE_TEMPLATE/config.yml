@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/locus313/ssh-key-sync/discussions
+    about: Ask a question or start a discussion about using ssh-key-sync.

@@ -1,0 +1,35 @@
+name: "Copilot Setup Steps"
+
+# Configures the environment for the GitHub Copilot coding agent.
+# Mirrors the dependencies used by lint.yml and test.yml so agent runs match CI.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+permissions:
+  contents: read
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install required packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y diffutils shellcheck
+
+      - name: Make script executable
+        run: chmod +x sync-ssh-keys.sh
+
+      - name: Verify syntax and local test suite
+        run: |
+          bash -n sync-ssh-keys.sh
+          bash test.sh
