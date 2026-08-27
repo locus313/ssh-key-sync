@@ -268,7 +268,93 @@ jobs:
             exit 1
           fi
 
+      - name: Reject symlink .ssh redirect into /root/.ssh
+        run: |
+          CANARY="ssh-key-sync-canary-$(date +%s)-$$"
+          sudo mkdir -p /root/.ssh
+          sudo chmod 700 /root/.ssh
+          echo "$CANARY" | sudo tee /root/.ssh/authorized_keys >/dev/null
+          sudo chmod 600 /root/.ssh/authorized_keys
+
+          sudo useradd -m symlinkuser
+          sudo -u symlinkuser rm -rf /home/symlinkuser/.ssh
+          sudo -u symlinkuser ln -s /root/.ssh /home/symlinkuser/.ssh
+
+          cat > users.conf << 'EOF'
+          #!/bin/bash
+          declare -A USER_KEYS=(
+            ["symlinkuser"]="ghuser:locus313"
+          )
+          EOF
+
+          set +e
+          OUT=$(sudo ./sync-ssh-keys.sh 2>&1)
+          RC=$?
+          set -e
+          echo "$OUT"
+
+          if [[ $RC -eq 0 ]]; then
+            echo "✗ Sync should fail when .ssh is a symlink"
+            exit 1
+          fi
+          if ! echo "$OUT" | grep -q "Refusing symlink .ssh directory"; then
+            echo "✗ Expected symlink .ssh refusal message"
+            exit 1
+          fi
+          if ! sudo grep -qx "$CANARY" /root/.ssh/authorized_keys; then
+            echo "✗ /root/.ssh/authorized_keys was modified through the symlink"
+            sudo cat /root/.ssh/authorized_keys || true
+            exit 1
+          fi
+          echo "✓ Symlinked .ssh directory is refused; root canary untouched"
+
+      - name: Reject symlink authorized_keys
+        run: |
+          CANARY="ssh-key-sync-canary-keys-$(date +%s)-$$"
+          sudo mkdir -p /root/.ssh
+          echo "$CANARY" | sudo tee /root/.ssh/authorized_keys >/dev/null
+          sudo chmod 600 /root/.ssh/authorized_keys
+
+          # Real .ssh dir owned by user, but authorized_keys points at root's file
+          sudo rm -rf /home/symlinkuser/.ssh
+          sudo -u symlinkuser mkdir -m 700 /home/symlinkuser/.ssh
+          sudo -u symlinkuser ln -s /root/.ssh/authorized_keys /home/symlinkuser/.ssh/authorized_keys
+
+          cat > users.conf << 'EOF'
+          #!/bin/bash
+          declare -A USER_KEYS=(
+            ["symlinkuser"]="ghuser:locus313"
+          )
+          EOF
+
+          set +e
+          OUT=$(sudo ./sync-ssh-keys.sh 2>&1)
+          RC=$?
+          set -e
+          echo "$OUT"
+
+          if [[ $RC -eq 0 ]]; then
+            echo "✗ Sync should fail when authorized_keys is a symlink"
+            exit 1
+          fi
+          if ! echo "$OUT" | grep -q "Refusing to write through symlink authorized_keys"; then
+            echo "✗ Expected symlink authorized_keys refusal message"
+            exit 1
+          fi
+          if ! sudo grep -qx "$CANARY" /root/.ssh/authorized_keys; then
+            echo "✗ /root/.ssh/authorized_keys was modified through the symlink"
+            sudo cat /root/.ssh/authorized_keys || true
+            exit 1
+          fi
+          # Symlink itself must still be present (not replaced by a regular file)
+          if ! sudo test -L /home/symlinkuser/.ssh/authorized_keys; then
+            echo "✗ Planted authorized_keys symlink was replaced"
+            exit 1
+          fi
+          echo "✓ Symlinked authorized_keys is refused; root canary untouched"
+
       - name: Cleanup integration test
         run: |
           sudo userdel -rf integrationuser 2>/dev/null || true
+          sudo userdel -rf symlinkuser 2>/dev/null || true
           git checkout users.conf
