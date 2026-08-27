@@ -4,13 +4,24 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '.github/instructions/**'
+      - '.github/skills/**'
+      - '.github/agents/**'
+      - '**/*.md'
+      - 'LICENSE'
   push:
     branches:
       - main
+    paths-ignore:
+      - '.github/instructions/**'
+      - '.github/skills/**'
+      - '.github/agents/**'
+      - '**/*.md'
+      - 'LICENSE'
 
 permissions:
   contents: read
-  packages: read
 
 jobs:
   # Run all individual checks in parallel
