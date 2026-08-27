@@ -347,11 +347,9 @@ get_user_gid() {
 # Resolve numeric UID for ownership checks (portable Linux/macOS)
 get_path_uid() {
   local path="$1"
-  if stat -c '%u' "$path" >/dev/null 2>&1; then
-    stat -c '%u' "$path"
-  else
-    stat -f '%u' "$path"
-  fi
+  # Boundary: we validate .ssh / authorized_keys themselves, not an
+  # attacker-controlled parent home (that needs write access to /home).
+  stat -c '%u' "$path" 2>/dev/null || stat -f '%u' "$path" 2>/dev/null
 }
 
 # Ensure .ssh is a real directory (not a symlink), owned by the target user when root
