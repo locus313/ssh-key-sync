@@ -32,4 +32,4 @@ jobs:
       - name: Verify syntax and local test suite
         run: |
           bash -n sync-ssh-keys.sh
-          ./test.sh
+          bash test.sh
