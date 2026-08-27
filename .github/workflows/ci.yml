@@ -33,14 +33,14 @@ jobs:
   # Run all individual checks in parallel
   lint:
     uses: ./.github/workflows/lint.yml
-    
+
   version-check:
     uses: ./.github/workflows/check-version.yml
     if: github.event_name == 'pull_request'
-    
+
   test:
     uses: ./.github/workflows/test.yml
-    
+
   # Final status check
   ci-success:
     runs-on: ubuntu-latest
@@ -53,15 +53,15 @@ jobs:
             echo "Lint job failed"
             exit 1
           fi
-          
+
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "Test job failed"
             exit 1
           fi
-          
+
           if [[ "${{ github.event_name }}" == "pull_request" && "${{ needs.version-check.result }}" != "success" ]]; then
             echo "Version check job failed"
             exit 1
           fi
-          
+
           echo "All CI checks passed!"
