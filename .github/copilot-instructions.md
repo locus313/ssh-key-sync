@@ -129,6 +129,21 @@ The script manages SSH infrastructure with specific patterns:
 - Uses atomic operations (temp file → move) for updates
 - Maintains proper ownership chain: directory → file → permissions
 
+## Maintenance Matrix
+
+When you change one part of this repo, check the related parts below — CI will catch some of these, but not all.
+
+| If you change... | You must also update... |
+|---|---|
+| `sync-ssh-keys.sh` (any behavior change) | Bump `readonly SCRIPT_VERSION` — `check-version.yml` blocks merge otherwise; `release.yml` auto-tags and publishes a GitHub Release from this value on merge to `main` |
+| A fetch method (`fetch_raw_key`, `fetch_api_key`, `fetch_ghuser_key`) | The "Supported Methods" table in [README.md](../README.md#configuration); the matching test fixture in `.github/workflows/test.yml` |
+| Adding a new fetch method | `validate_method()` case statement, `fetch_key_file()` dispatch case, new `fetch_<method>_key()` function, README methods table, `test.yml` fixture — all four are required, see AGENTS.md "Adding a New Fetch Method" |
+| Function names referenced by tests (`log_message`, `fetch_key_file`, `validate_method`, `load_configuration`, etc.) | `.github/workflows/test.yml`'s `grep -q "^function_name()"` assertions and `test.sh` — both check for exact function signatures |
+| `users.conf` format | README.md "Configuration Format" and "Example Configuration" sections; the `test-users.conf`/`test-empty.conf`/`test-invalid.conf` fixtures generated inline in `test.yml` |
+| Any reusable workflow (`lint.yml`, `test.yml`, `check-version.yml`) | Confirm `ci.yml` still calls it via `workflow_call` and lists it in the `needs:` array of `ci-success`; update the matching section in `TESTING.md` |
+| Self-update logic (`download_latest_script`, `get_latest_release_url`, `self_update`) | `TESTING.md` self-update test description; verify `GITHUB_REPO` constant still matches this repo |
+| File permission or ownership logic | Security Considerations section of README.md and the "File System Security" checklist there |
+
 ## Contribution Guidelines
 
 ### Pre-Commit Validation

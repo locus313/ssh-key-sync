@@ -1,5 +1,6 @@
 # SSH Key Sync
 
+[![AI Ready](https://img.shields.io/badge/AI--Ready-yes-brightgreen?style=flat)](https://github.com/johnpapa/ai-ready)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/locus313/ssh-key-sync/ci.yml?style=flat-square&label=CI)](https://github.com/locus313/ssh-key-sync/actions)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-green?style=flat-square&logo=gnu-bash)](https://www.gnu.org/software/bash/)
@@ -9,7 +10,7 @@
 
 ⭐ If you like this project, star it on GitHub — it helps a lot!
 
-[Features](#features) • [Getting Started](#getting-started) • [Configuration](#configuration) • [Usage](#usage) • [Examples](#examples) • [Automation](#automation) • [Testing](#testing)
+[Features](#features) • [Getting Started](#getting-started) • [Configuration](#configuration) • [Usage](#usage) • [Examples](#examples) • [Automation](#automation) • [Testing](#testing) • [Contributing](#contributing)
 
 A robust and secure Bash script for automating SSH `authorized_keys` synchronization across multiple users from various sources. Perfect for managing SSH access in development environments, CI/CD pipelines, and production systems with enterprise-grade reliability.
 
@@ -578,6 +579,22 @@ curl -fsSL https://raw.githubusercontent.com/locus313/ssh-key-sync/main/test.sh 
 
 > [!NOTE]
 > For detailed testing procedures and guidelines, see [TESTING.md](TESTING.md).
+
+## Contributing
+
+Contributions are welcome! To submit a change:
+
+1. Fork the repo and create a branch off `main`.
+2. Make your change and bump `readonly SCRIPT_VERSION` in `sync-ssh-keys.sh` if you modified it — CI blocks PRs that change the script without a version bump.
+3. Run the checks locally before opening a PR:
+   ```bash
+   bash -n sync-ssh-keys.sh
+   ./test.sh
+   shellcheck sync-ssh-keys.sh
+   ```
+4. Open a pull request against `main`. The [PR template](.github/PULL_REQUEST_TEMPLATE.md) checklist mirrors these steps.
+
+See [AGENTS.md](AGENTS.md) and [.github/copilot-instructions.md](.github/copilot-instructions.md) for architecture details, conventions, and the maintenance matrix of what to update alongside common changes.
 
 ## Security Considerations
 

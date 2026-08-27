@@ -1,0 +1,53 @@
+name: Bug Report
+description: Report a problem with sync-ssh-keys.sh or users.conf
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the details below.
+  - type: input
+    id: version
+    attributes:
+      label: Script version
+      description: Output of `./sync-ssh-keys.sh --version`
+      placeholder: "0.1.9"
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: users.conf (redacted)
+      description: Paste the relevant part of your `users.conf`. Remove tokens and real usernames.
+      render: bash
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Run with `bash -x sync-ssh-keys.sh` for verbose output. Redact any tokens or keys.
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: os
+    attributes:
+      label: OS / distribution
+      placeholder: "Debian 12, Ubuntu 22.04, etc."
+    validations:
+      required: true
