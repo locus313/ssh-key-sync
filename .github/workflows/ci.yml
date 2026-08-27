@@ -4,9 +4,23 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '.github/instructions/**'
+      - '.github/skills/**'
+      - '.github/agents/**'
+      - '.github/prompts/**'
+      - '**/*.md'
+      - 'LICENSE'
   push:
     branches:
       - main
+    paths-ignore:
+      - '.github/instructions/**'
+      - '.github/skills/**'
+      - '.github/agents/**'
+      - '.github/prompts/**'
+      - '**/*.md'
+      - 'LICENSE'
 
 permissions:
   contents: read
