@@ -23,6 +23,12 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded runs so rapid pushes to the same PR/branch don't burn
+# minutes on commits that are no longer relevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Run all individual checks in parallel
   lint:
