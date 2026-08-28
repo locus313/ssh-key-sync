@@ -52,7 +52,7 @@ sudo ./sync-ssh-keys.sh
 ### CI/CD Pipeline Structure
 The project uses a sophisticated multi-workflow CI system:
 - **`ci.yml`**: Orchestrates all checks (lint, test, version validation)
-- **`test.yml`**: Creates real users, tests all fetch methods, validates error handling
+- **`test.yml`**: Provisions real test users, then delegates all assertions to `.github/scripts/functional-tests.sh` and `.github/scripts/integration-tests.sh`
 - **`lint.yml`**: ShellCheck static analysis
 - **`check-version.yml`**: Ensures version bumps in PRs
 
@@ -137,11 +137,11 @@ When you change one part of this repo, check the related parts below — CI will
 | If you change... | You must also update... |
 |---|---|
 | `sync-ssh-keys.sh` (any behavior change) | Bump `readonly SCRIPT_VERSION` — `check-version.yml` blocks merge otherwise; `release.yml` auto-tags and publishes a GitHub Release from this value on merge to `main` |
-| A fetch method (`fetch_raw_key`, `fetch_api_key`, `fetch_ghuser_key`) | The "Supported Methods" table in [README.md](../README.md#configuration); the matching test fixture in `.github/workflows/test.yml` |
-| Adding a new fetch method | `validate_method()` case statement, `fetch_key_file()` dispatch case, new `fetch_<method>_key()` function, README methods table, `test.yml` fixture — all four are required, see AGENTS.md "Adding a New Fetch Method" |
-| Function names referenced by tests (`log_message`, `fetch_key_file`, `validate_method`, `load_configuration`, etc.) | `.github/workflows/test.yml`'s `grep -q "^function_name()"` assertions and `test.sh` — both check for exact function signatures |
-| `users.conf` format | README.md "Configuration Format" and "Example Configuration" sections; the `test-users.conf`/`test-empty.conf`/`test-invalid.conf` fixtures generated inline in `test.yml` |
-| Any reusable workflow (`lint.yml`, `test.yml`, `check-version.yml`) | Confirm `ci.yml` still calls it via `workflow_call` and lists it in the `needs:` array of `ci-success`; update the matching section in `TESTING.md` |
+| A fetch method (`fetch_raw_key`, `fetch_api_key`, `fetch_ghuser_key`) | The "Supported Methods" table in [README.md](../README.md#configuration); the matching test fixture in `.github/scripts/functional-tests.sh` |
+| Adding a new fetch method | `validate_method()` case statement, `fetch_key_file()` dispatch case, new `fetch_<method>_key()` function, README methods table, `.github/scripts/functional-tests.sh` fixture — all four are required, see AGENTS.md "Adding a New Fetch Method" |
+| Function names referenced by tests (`log_message`, `fetch_key_file`, `validate_method`, `load_configuration`, etc.) | `.github/scripts/functional-tests.sh`'s `grep -q "^function_name()"` assertions and `test.sh` — both check for exact function signatures |
+| `users.conf` format | README.md "Configuration Format" and "Example Configuration" sections; the fixtures generated inline in `.github/scripts/functional-tests.sh` and `.github/scripts/integration-tests.sh` |
+| Any reusable workflow (`lint.yml`, `test.yml`, `check-version.yml`) | Confirm `ci.yml` still calls it via `workflow_call` and lists it in the `needs:` array of `ci-success`; update the matching section in `TESTING.md`. Note: `test.yml` itself only provisions fixtures (packages, test users) — new test *cases* go in `.github/scripts/*.sh`, not the workflow |
 | Self-update logic (`download_latest_script`, `get_latest_release_url`, `self_update`) | `TESTING.md` self-update test description; verify `GITHUB_REPO` constant still matches this repo |
 | File permission or ownership logic | Security Considerations section of README.md and the "File System Security" checklist there |
 

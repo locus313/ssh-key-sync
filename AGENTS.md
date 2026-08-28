@@ -12,6 +12,7 @@ Guidance for AI coding agents working in `ssh-key-sync`. See also [.github/copil
 sync-ssh-keys.sh   # The entire application: logging, config loading, fetch methods, self-update, user/SSH management, main
 users.conf          # Externalized configuration (declare -A USER_KEYS=(["user"]="method:target"))
 test.sh             # Local test suite (syntax check, function presence, shellcheck if available)
+.github/scripts/     # functional-tests.sh, integration-tests.sh — CI test assertions (workflow only provisions fixtures)
 TESTING.md          # Testing guide describing CI workflows and local test procedures
 README.md           # User-facing docs: install, configuration, usage, automation, troubleshooting, security, FAQ
 .github/workflows/  # ci.yml (orchestrator), lint.yml, test.yml, check-version.yml, release.yml
@@ -47,7 +48,7 @@ bash -n sync-ssh-keys.sh   # syntax check
 shellcheck sync-ssh-keys.sh  # if installed
 ```
 
-CI mirrors this in `.github/workflows/lint.yml` (ShellCheck) and `.github/workflows/test.yml` (unit + integration tests using real, temporary Linux users). Integration tests only run on `pull_request` events. Unit tests deliberately avoid executing the main script flow to prevent side effects — they check for function presence via `grep` and validate config parsing in isolation.
+CI mirrors this in `.github/workflows/lint.yml` (ShellCheck) and `.github/workflows/test.yml` (unit + integration tests using real, temporary Linux users). Integration tests only run on `pull_request` events. Unit tests deliberately avoid executing the main script flow to prevent side effects — they check for function presence via `grep` and validate config parsing in isolation. `test.yml` only provisions CI fixtures (packages, test users); the actual test assertions live in `.github/scripts/functional-tests.sh` and `.github/scripts/integration-tests.sh` — add new test cases there as `test_*` functions, no workflow YAML changes needed.
 
 ## Key Patterns and Conventions
 
@@ -64,7 +65,7 @@ The three existing methods (`raw`, `api`, `ghuser`) show the full registration c
 1. Add the method name to the `case` statement in `validate_method()` (sync-ssh-keys.sh).
 2. Implement `fetch_<method>_key()` with the same signature as the existing ones: `(target, output_file) -> curl ... -o "$output_file"`.
 3. Wire it into the `case` dispatch inside `fetch_key_file()` so retries apply to it automatically.
-4. Document it in the README.md "Supported Methods" table and add a corresponding fixture/test case in `.github/workflows/test.yml`.
+4. Document it in the README.md "Supported Methods" table and add a corresponding fixture/test case in `.github/scripts/functional-tests.sh`.
 
 ## CI/CD
 
@@ -75,7 +76,7 @@ The three existing methods (`raw`, `api`, `ghuser`) show the full registration c
 - Forgetting to bump `SCRIPT_VERSION` when changing `sync-ssh-keys.sh` — CI will reject the PR.
 - Adding a fetch method without updating all four places in the chain above.
 - Testing against the live `sync-ssh-keys.sh` main flow instead of function-level checks — the CI `test` job intentionally avoids running the script directly for unit tests to prevent unintended filesystem/user side effects; only the `integration-test` job (PRs only) runs it for real, against disposable test users.
-- Editing `users.conf` in place during local testing without restoring it — `test.yml` does `git checkout users.conf` in cleanup; do the same locally.
+- Editing `users.conf` in place during local testing without restoring it — `.github/scripts/functional-tests.sh`/`integration-tests.sh` do `git checkout users.conf` in cleanup; do the same locally.
 
 ## Documentation Status
 

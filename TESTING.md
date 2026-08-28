@@ -20,8 +20,14 @@ The primary CI workflow that orchestrates all testing:
 - Provides final pass/fail status
 
 ### Test Workflow (`.github/workflows/test.yml`)
-Comprehensive functional testing:
-- **Unit Tests**: Configuration validation, error handling, function presence
+Comprehensive functional testing. The workflow only provisions CI fixtures
+(packages, temporary Linux users); all assertions live in
+`.github/scripts/functional-tests.sh` (unit-ish, run-as-real-script tests)
+and `.github/scripts/integration-tests.sh` (full sync + permission +
+symlink-attack tests, `pull_request` only). Add a new test case by writing
+a `test_*` function and a `run_test` line in the relevant script — no
+workflow YAML changes required.
+- **Functional Tests**: Configuration validation, error handling, function presence
 - **Integration Tests**: Real user creation and SSH key synchronization
 - **Mock Tests**: Network endpoint validation without external dependencies
 - **Error Condition Tests**: Invalid configurations and edge cases
@@ -185,8 +191,8 @@ shellcheck sync-ssh-keys.sh      # Linting
 
 When adding new features or fixing bugs:
 
-1. **Add unit tests** to `test.yml` workflow
-2. **Update the local test script** if needed
+1. **Add a test case** as a `test_*` function in `.github/scripts/functional-tests.sh` or `integration-tests.sh` (whichever fits), plus a `run_test` line — no `test.yml` edits needed unless the test requires a new fixture (e.g. a new test user)
+2. **Update the local test script** (`test.sh`) if needed
 3. **Test edge cases** and error conditions
 4. **Ensure backward compatibility**
 5. **Document test scenarios** in pull requests
