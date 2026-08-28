@@ -13,10 +13,10 @@ The main script follows a modular architecture with distinct functional layers:
 
 - **Utility Functions** (lines 25-52): Timestamped logging functions (`log_message`, `log_error`, `log_warning`, `log_info`)
 - **Configuration Management** (lines 53-77): Configuration loading and validation with error handling
-- **Fetch Methods** (lines 78-201): Method validation, three fetch strategies, and unified retry logic (`validate_method`, `fetch_raw_key`, `fetch_api_key`, `fetch_ghuser_key`, `fetch_key_file`)
-- **Self-Update System** (lines 202-297): Download, validate, and replace script functionality
-- **User Management** (lines 298-519): User validation, GID resolution, SSH directory creation, file permission management (`validate_user`, `get_user_home`, `get_user_gid`, `create_ssh_directory`, `update_authorized_keys`, `files_are_identical`, `process_user_keys`)
-- **Main Execution** (lines 520-642): Command-line parsing, configuration sourcing, and orchestration
+- **Fetch Methods** (lines 78-202): Method validation, three fetch strategies, and unified retry logic (`validate_method`, `fetch_raw_key`, `fetch_api_key`, `fetch_ghuser_key`, `fetch_key_file`)
+- **Self-Update System** (lines 203-329): Download, checksum-verify (against the sha256 digest GitHub's Releases API reports for the asset), and replace script functionality
+- **User Management** (lines 330-665): User validation, GID resolution, SSH directory creation, file permission management (`validate_user`, `get_user_home`, `get_user_gid`, `create_ssh_directory`, `update_authorized_keys`, `files_are_identical`, `process_user_keys`)
+- **Main Execution** (lines 666-788): Command-line parsing, configuration sourcing, and orchestration
 
 ### Configuration Architecture (`users.conf`)
 Configuration uses Bash associative arrays for user-to-source mapping:
@@ -75,6 +75,7 @@ The script uses a **defensive programming** approach:
 ### Self-Update Mechanism
 The `--self-update` feature demonstrates key patterns:
 - GitHub API integration for release information
+- sha256 checksum verification against the digest reported by GitHub's Releases API before trusting a download
 - Temporary file management with cleanup
 - Script validation before replacement
 - Atomic replacement to prevent corruption
