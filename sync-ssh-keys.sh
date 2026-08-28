@@ -7,7 +7,7 @@ set -euo pipefail
 # Repository: https://github.com/locus313/ssh-key-sync
 
 # shellcheck disable=SC2034  # planned to be used in a future release
-readonly SCRIPT_VERSION="0.1.9"
+readonly SCRIPT_VERSION="0.1.10"
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 
@@ -119,10 +119,11 @@ fetch_api_key() {
     return 1
   fi
   
-  curl -fsSL \
-    -H "Authorization: token $GITHUB_TOKEN" \
-    -H "Accept: application/vnd.github.v3.raw" \
-    "$url" -o "$output_file"
+  # ponytail: token passed via curl -K stdin config, not argv, so it can't leak through /proc/<pid>/cmdline or ps
+  curl -fsSL -K - "$url" -o "$output_file" <<EOF
+header = "Authorization: token $GITHUB_TOKEN"
+header = "Accept: application/vnd.github.v3.raw"
+EOF
 }
 
 # Fetch key file using GitHub user method (public keys)
@@ -204,7 +205,8 @@ fetch_key_file() {
 # Download and validate the latest script version
 download_latest_script() {
   local latest_url="$1"
-  local temp_dir="$2"
+  local expected_digest="$2"
+  local temp_dir="$3"
   local temp_script="$temp_dir/sync-ssh-keys.sh"
   
   log_info "Downloading latest script from: $latest_url"
@@ -225,44 +227,74 @@ download_latest_script() {
     return 1
   fi
 
+  # Verify integrity against the sha256 digest GitHub computed for this release asset,
+  # obtained from the API response (not from the download itself), so a tampered
+  # download (compromised CDN/MITM) is caught before it replaces the running script.
+  local actual_digest
+  actual_digest="sha256:$(sha256sum "$temp_script" | cut -d ' ' -f 1)"
+  if [[ "$actual_digest" != "$expected_digest" ]]; then
+    log_error "Checksum mismatch: expected $expected_digest, got $actual_digest"
+    return 1
+  fi
+
   log_info "Successfully downloaded and validated script"
   return 0
 }
 
-# Get the latest release download URL
+# Get the latest release download URL and its expected sha256 digest
 get_latest_release_url() {
   local repo="$1"
   local api_url="https://api.github.com/repos/$repo/releases/latest"
   
   log_info "Fetching latest release information..."
   
-  local download_url
-  if ! download_url=$(curl -fsSL "$api_url" | grep "browser_download_url" | grep "sync-ssh-keys.sh" | cut -d '"' -f 4); then
-    log_error "Could not determine the latest version URL from GitHub API"
+  local release_json
+  if ! release_json=$(curl -fsSL "$api_url"); then
+    log_error "Could not fetch release information from GitHub API"
     return 1
   fi
-  
+
+  # Isolate the JSON object for the sync-ssh-keys.sh asset so the digest we
+  # extract is the one that actually corresponds to this download URL.
+  local asset_block
+  asset_block=$(echo "$release_json" | awk '/"name": "sync-ssh-keys.sh"/{f=1} f{print} f&&/^    \}/{exit}')
+
+  local download_url
+  download_url=$(echo "$asset_block" | grep '"browser_download_url"' | cut -d '"' -f 4)
+
+  local digest
+  digest=$(echo "$asset_block" | grep '"digest"' | cut -d '"' -f 4)
+
   if [[ -z "$download_url" ]]; then
     log_error "No download URL found for sync-ssh-keys.sh in latest release"
     return 1
   fi
-  
-  echo "$download_url"
+
+  if [[ -z "$digest" ]]; then
+    log_error "No digest found for sync-ssh-keys.sh asset; refusing to self-update without integrity verification"
+    return 1
+  fi
+
+  echo "$download_url $digest"
 }
 
 # Perform self-update of the script
 self_update() {
   local latest_url
+  local latest_digest
   local temp_dir
   local current_script="$SCRIPT_DIR/$SCRIPT_NAME"
 
   log_info "Starting self-update process..."
 
-  # Get latest release URL
-  if ! latest_url=$(get_latest_release_url "$GITHUB_REPO"); then
+  # Get latest release URL and its expected sha256 digest
+  local release_info
+  if ! release_info=$(get_latest_release_url "$GITHUB_REPO"); then
     log_error "Failed to get latest release URL"
     exit 1
   fi
+  latest_url="${release_info% *}"
+  latest_digest="${release_info#* }"
 
   # Create temporary directory
   if ! temp_dir=$(mktemp -d); then
@@ -274,7 +306,7 @@ self_update() {
   trap 'rm -rf "$temp_dir"' EXIT
 
   # Download and validate
-  if ! download_latest_script "$latest_url" "$temp_dir"; then
+  if ! download_latest_script "$latest_url" "$latest_digest" "$temp_dir"; then
     log_error "Failed to download or validate the latest script"
     exit 1
   fi

@@ -622,6 +622,17 @@ chown root:root users.conf
 # They provide better security and audit trails than personal access tokens
 ```
 
+The GitHub API token is passed to `curl` via a config file on stdin (`curl -K -`)
+rather than as a command-line argument, so it never appears in `ps`/`/proc/<pid>/cmdline`
+output visible to other local users.
+
+### Self-Update Integrity
+
+`--self-update` verifies the downloaded script against the `sha256` digest GitHub
+computed for that release asset (returned by the GitHub Releases API) before
+replacing the running script. If the digest is missing or doesn't match, the
+update is aborted and the current script is left untouched.
+
 ### Network Security
 
 ```bash
