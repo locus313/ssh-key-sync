@@ -45,6 +45,11 @@ test_file_permissions_correct() {
     [[ "$(sudo stat -c '%a' /home/integrationuser/.ssh/authorized_keys)" == "600" ]]
 }
 
+test_file_ownership_correct() {
+  [[ "$(sudo stat -c '%U:%G' /home/integrationuser/.ssh)" == "integrationuser:integrationuser" ]] &&
+    [[ "$(sudo stat -c '%U:%G' /home/integrationuser/.ssh/authorized_keys)" == "integrationuser:integrationuser" ]]
+}
+
 test_reject_symlink_ssh_directory() {
   local canary
   canary="ssh-key-sync-canary-$(date +%s)-$$"
@@ -109,6 +114,7 @@ trap cleanup EXIT
 
 run_test "Sync creates authorized_keys"           test_sync_creates_authorized_keys
 run_test "File permissions are correct (700/600)" test_file_permissions_correct
+run_test "File ownership is correct"              test_file_ownership_correct
 run_test "Reject symlink .ssh directory"          test_reject_symlink_ssh_directory
 run_test "Reject symlink authorized_keys"         test_reject_symlink_authorized_keys
 

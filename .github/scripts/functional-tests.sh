@@ -89,6 +89,26 @@ test_self_update_functions_present() {
     grep -q "download_latest_script" "$MAIN_SCRIPT"
 }
 
+# Full self-update round trip (download + digest verification + replace) against
+# the real latest GitHub release, run on a scratch copy so it can't clobber the
+# checkout other tests depend on.
+test_self_update_round_trip() {
+  local scratch
+  scratch=$(mktemp -d)
+  cp "$MAIN_SCRIPT" "$scratch/sync-ssh-keys.sh"
+  chmod +x "$scratch/sync-ssh-keys.sh"
+
+  (cd "$scratch" && ./sync-ssh-keys.sh --self-update) || {
+    rm -rf "$scratch"
+    return 1
+  }
+
+  local ok=0
+  [[ -x "$scratch/sync-ssh-keys.sh" ]] && bash -n "$scratch/sync-ssh-keys.sh" && ok=1
+  rm -rf "$scratch"
+  [[ $ok -eq 1 ]]
+}
+
 test_error_config_syntax_valid() {
   cat >/tmp/test-errors.conf <<'EOF'
 #!/bin/bash
@@ -121,6 +141,7 @@ run_test "Empty user array handling"          test_empty_user_array
 run_test "GitHub user key endpoint reachable" test_ghuser_endpoint_reachable
 run_test "Script version extraction"          test_version_extractable
 run_test "Self-update functions present"      test_self_update_functions_present
+run_test "Self-update round trip succeeds"    test_self_update_round_trip
 run_test "Error handling config syntax"       test_error_config_syntax_valid
 run_test "Log functions present"              test_log_functions_present
 
